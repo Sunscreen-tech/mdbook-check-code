@@ -87,7 +87,7 @@
           meta = with pkgs.lib; {
             description = "mdBook preprocessor for checking code blocks in multiple languages (Parasol C, C, TypeScript)";
             homepage = "https://github.com/Sunscreen-tech/mdbook-check-code";
-            license = licenses.mit;
+            license = licenses.agpl3Only;
           };
         };
       in {
