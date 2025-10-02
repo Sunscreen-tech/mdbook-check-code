@@ -1,19 +1,75 @@
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 
-/// A code block extracted from markdown
+/// A code block extracted from markdown with its metadata.
+///
+/// Code blocks are identified by fenced code syntax in markdown:
+///
+/// ````markdown
+/// ```c
+/// int main() { return 0; }
+/// ```
+/// ````
+///
+/// # Attributes
+///
+/// Code blocks can have comma-separated attributes in the fence info string:
+///
+/// - `ignore` - Skip compilation for this block
+/// - `propagate` - Make code available to subsequent blocks in the same file
+///
+/// # Example
+///
+/// ````markdown
+/// ```c,propagate
+/// struct Point { int x, y; };
+/// ```
+///
+/// ```c
+/// // Can use Point from the propagated block above
+/// struct Point p = {1, 2};
+/// ```
+/// ````
 #[derive(Debug, Clone)]
 pub struct CodeBlock {
-    /// The programming language (e.g., "c", "typescript", "parasol-c")
+    /// The programming language from the fence marker (e.g., "c", "typescript", "parasol-c")
     pub language: String,
     /// The actual code content
     pub code: String,
-    /// Whether this block should be ignored
+    /// Whether this block should be ignored (skipped during compilation)
     pub ignore: bool,
-    /// Whether this block should be propagated to subsequent blocks
+    /// Whether this block's code should be propagated to subsequent blocks
     pub propagate: bool,
 }
 
-/// Extract code blocks from markdown content using pulldown-cmark
+/// Extracts code blocks from markdown content using pulldown-cmark.
+///
+/// This function parses markdown and extracts all fenced code blocks with their
+/// language and attributes. It does not handle propagation - use
+/// [`extract_code_blocks_with_propagation`] for that.
+///
+/// # Arguments
+///
+/// * `content` - The markdown content to parse
+///
+/// # Returns
+///
+/// A vector of [`CodeBlock`] instances, one for each fenced code block found.
+///
+/// # Example
+///
+/// ```ignore
+/// let markdown = r#"
+/// # My Code
+///
+/// ```c
+/// int main() { return 0; }
+/// ```
+/// "#;
+///
+/// let blocks = extract_code_blocks(markdown);
+/// assert_eq!(blocks.len(), 1);
+/// assert_eq!(blocks[0].language, "c");
+/// ```
 pub fn extract_code_blocks(content: &str) -> Vec<CodeBlock> {
     let parser = Parser::new(content);
     let mut code_blocks = Vec::new();
@@ -82,8 +138,48 @@ fn parse_fence_info(info: &str) -> (String, Vec<&str>) {
     (language, flags)
 }
 
-/// Extract code blocks and handle propagation within a file
-/// Propagated code is accumulated and prepended to subsequent non-propagated blocks
+/// Extracts code blocks with propagation support.
+///
+/// This function handles the `propagate` attribute, which allows code from earlier
+/// blocks to be automatically included in later blocks within the same file.
+/// Propagation never leaks between different markdown files.
+///
+/// # Propagation Behavior
+///
+/// - Blocks marked with `propagate` have their code accumulated
+/// - Non-propagated blocks receive all accumulated code as a preamble
+/// - Propagated blocks do NOT receive accumulated code (they only contribute)
+/// - Blocks marked with `ignore` are skipped entirely
+///
+/// # Arguments
+///
+/// * `content` - The markdown content to parse
+///
+/// # Returns
+///
+/// A vector of tuples `(final_code, original_block)` where:
+/// - `final_code` includes any propagated code prepended
+/// - `original_block` is the original code block metadata
+///
+/// # Example
+///
+/// ````markdown
+/// ```c,propagate
+/// struct Point { int x, y; };
+/// ```
+///
+/// ```c
+/// // This block will have Point definition prepended
+/// struct Point p = {1, 2};
+/// ```
+/// ````
+///
+/// The second block will be compiled with:
+/// ```c
+/// struct Point { int x, y; };
+///
+/// struct Point p = {1, 2};
+/// ```
 pub fn extract_code_blocks_with_propagation(content: &str) -> Vec<(String, CodeBlock)> {
     let code_blocks = extract_code_blocks(content);
     let mut result = Vec::new();

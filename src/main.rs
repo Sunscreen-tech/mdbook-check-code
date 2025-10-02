@@ -10,6 +10,9 @@ use std::io;
 use std::process::exit;
 
 pub fn main() {
+    // Initialize logging
+    env_logger::init();
+
     // Handle mdbook preprocessor commands
     let mut args = std::env::args().skip(1);
 
@@ -28,8 +31,8 @@ pub fn main() {
     }
 
     // Run as preprocessor
-    if let Err(e) = handle_preprocessing() {
-        eprintln!("Error: {}", e);
+    if let Err(_e) = handle_preprocessing() {
+        // Error already printed in preprocessor with proper formatting
         exit(1);
     }
 }

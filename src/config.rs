@@ -1,18 +1,43 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
+use std::path::Path;
 
-/// Configuration for the check-code preprocessor
+/// Configuration for the check-code preprocessor.
+///
+/// This structure is deserialized from the `[preprocessor.check-code]` section
+/// of `book.toml`. It contains all language-specific configurations.
+///
+/// # Example
+///
+/// ```toml
+/// [preprocessor.check-code]
+///
+/// [preprocessor.check-code.languages.c]
+/// enabled = true
+/// compiler = "gcc"
+/// flags = ["-fsyntax-only"]
+/// fence_markers = ["c"]
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct CheckCodeConfig {
-    /// Language-specific configurations
+    /// Language-specific configurations indexed by language name
     #[serde(default)]
     pub languages: HashMap<String, LanguageConfig>,
 }
 
-/// Configuration for a specific language
+/// Configuration for a specific language.
+///
+/// Each language configuration specifies how code blocks should be validated
+/// for that language. All fields support environment variable expansion using
+/// `${VAR_NAME}` syntax.
+///
+/// # Security
+///
+/// Compiler paths are validated to prevent command injection. Paths cannot
+/// contain shell metacharacters or use parent directory traversal.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LanguageConfig {
     /// Whether this language is enabled for checking
@@ -38,26 +63,67 @@ fn default_true() -> bool {
     true
 }
 
+impl LanguageConfig {
+    /// Validate the configuration for security and correctness
+    pub fn validate(&self) -> Result<()> {
+        // Ensure compiler path doesn't contain shell metacharacters
+        let dangerous_chars = [';', '|', '&', '`', '\n', '\r'];
+        for ch in dangerous_chars {
+            if self.compiler.contains(ch) {
+                anyhow::bail!(
+                    "Compiler path contains invalid character '{}': {}",
+                    ch.escape_default(),
+                    self.compiler
+                );
+            }
+        }
+
+        // Ensure compiler path doesn't use parent directory traversal
+        let compiler_path = Path::new(&self.compiler);
+        for component in compiler_path.components() {
+            if matches!(component, std::path::Component::ParentDir) {
+                anyhow::bail!("Compiler path cannot contain '..': {}", self.compiler);
+            }
+        }
+
+        // Ensure fence_markers is not empty
+        if self.fence_markers.is_empty() {
+            anyhow::bail!("Language configuration must have at least one fence marker");
+        }
+
+        // Ensure compiler is not empty
+        if self.compiler.is_empty() {
+            anyhow::bail!("Compiler path cannot be empty");
+        }
+
+        Ok(())
+    }
+}
+
 impl CheckCodeConfig {
     /// Parse configuration from mdbook PreprocessorContext and expand environment variables
     pub fn from_preprocessor_context(
         ctx: &mdbook::preprocess::PreprocessorContext,
     ) -> Result<Self> {
         // Try to get our preprocessor's configuration
-        let mut config: CheckCodeConfig = if let Some(config_value) =
-            ctx.config.get("preprocessor.check-code")
-        {
-            config_value.clone().try_into()?
-        } else {
-            Self::default()
-        };
+        let mut config: CheckCodeConfig =
+            if let Some(config_value) = ctx.config.get("preprocessor.check-code") {
+                config_value.clone().try_into()?
+            } else {
+                Self::default()
+            };
 
-        // Expand environment variables in all language configs
-        for (_name, lang_config) in config.languages.iter_mut() {
+        // Expand environment variables in all language configs and validate
+        for (name, lang_config) in config.languages.iter_mut() {
             lang_config.compiler = expand_env_vars(&lang_config.compiler);
             for flag in lang_config.flags.iter_mut() {
                 *flag = expand_env_vars(flag);
             }
+
+            // Validate the configuration for security
+            lang_config
+                .validate()
+                .with_context(|| format!("Invalid configuration for language '{}'", name))?;
         }
 
         Ok(config)
@@ -71,29 +137,48 @@ impl CheckCodeConfig {
 
 /// Expand environment variables in a string
 /// Supports ${VAR_NAME} syntax
+/// This function processes the string in a single pass to avoid re-processing expanded values
 fn expand_env_vars(s: &str) -> String {
-    let mut result = s.to_string();
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
 
-    // Find all ${...} patterns and expand them
-    while let Some(start) = result.find("${") {
-        if let Some(end_offset) = result[start..].find('}') {
-            let end = start + end_offset;
-            let var_name = &result[start + 2..end];
+    while let Some(ch) = chars.next() {
+        if ch == '$' && chars.peek() == Some(&'{') {
+            chars.next(); // consume '{'
 
-            // Get the environment variable value
-            let value = env::var(var_name).unwrap_or_else(|_| {
-                eprintln!(
-                    "Warning: Environment variable '{}' not found, leaving unexpanded",
-                    var_name
-                );
-                format!("${{{}}}", var_name)
-            });
+            // Collect variable name
+            let mut var_name = String::new();
+            let mut found_close = false;
 
-            // Replace the ${VAR} with its value
-            result.replace_range(start..=end, &value);
+            for ch in chars.by_ref() {
+                if ch == '}' {
+                    found_close = true;
+                    break;
+                }
+                var_name.push(ch);
+            }
+
+            if found_close {
+                // Try to expand the variable
+                match env::var(&var_name) {
+                    Ok(value) => result.push_str(&value),
+                    Err(_) => {
+                        log::warn!(
+                            "Environment variable '{}' not found, leaving unexpanded",
+                            var_name
+                        );
+                        result.push_str("${");
+                        result.push_str(&var_name);
+                        result.push('}');
+                    }
+                }
+            } else {
+                // No closing brace found, treat as literal
+                result.push_str("${");
+                result.push_str(&var_name);
+            }
         } else {
-            // No closing brace found, stop processing
-            break;
+            result.push(ch);
         }
     }
 
@@ -103,8 +188,10 @@ fn expand_env_vars(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_expand_env_vars_with_var() {
         env::set_var("TEST_VAR", "/usr/bin/test");
         let result = expand_env_vars("${TEST_VAR}/clang");
@@ -113,6 +200,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_expand_env_vars_without_var() {
         env::remove_var("NONEXISTENT_VAR");
         let result = expand_env_vars("${NONEXISTENT_VAR}");

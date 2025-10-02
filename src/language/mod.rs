@@ -5,54 +5,105 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
-/// Trait for language-specific compilation and validation
+/// Trait for language-specific compilation and validation.
+///
+/// This trait defines the interface for validating code blocks in different
+/// programming languages. Implementations must be thread-safe (`Send + Sync`)
+/// to support potential parallel compilation in the future.
+///
+/// # Example Implementation
+///
+/// ```ignore
+/// struct MyLanguage {
+///     name: String,
+///     fence_markers: Vec<String>,
+///     file_extension: String,
+/// }
+///
+/// impl Language for MyLanguage {
+///     fn name(&self) -> &str { &self.name }
+///     fn fence_markers(&self) -> &[String] { &self.fence_markers }
+///     fn file_extension(&self) -> &str { &self.file_extension }
+///     fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
+///         // Validation logic here
+///         Ok(())
+///     }
+/// }
+/// ```
 pub trait Language: Send + Sync {
-    /// The name of this language (e.g., "parasol-c", "c", "typescript")
+    /// Returns the name of this language (e.g., "parasol-c", "c", "typescript").
     fn name(&self) -> &str;
 
-    /// Fence markers that identify this language in markdown code blocks
-    /// (e.g., ["c"], ["typescript", "ts"], ["parasol-c", "parasol"])
+    /// Returns the fence markers that identify this language in markdown.
+    ///
+    /// Multiple fence markers can map to the same language, e.g.,
+    /// `["typescript", "ts"]` for TypeScript.
     fn fence_markers(&self) -> &[String];
 
-    /// The file extension for this language (e.g., ".c", ".ts")
+    /// Returns the file extension for this language (e.g., ".c", ".ts").
     fn file_extension(&self) -> &str;
 
-    /// Compile or validate the given code
+    /// Compiles or validates the given code.
     ///
     /// # Arguments
-    /// * `code` - The source code to validate
+    ///
+    /// * `code` - The source code to validate (may include preambles)
     /// * `temp_file` - Path where the code should be written for compilation
     ///
     /// # Returns
-    /// Ok(()) if compilation succeeds, Err with details if it fails
+    ///
+    /// * `Ok(())` if compilation succeeds
+    /// * `Err` with compilation error details if it fails
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The temporary file cannot be created or written
+    /// - The compiler executable cannot be found or executed
+    /// - The code fails to compile
     fn compile(&self, code: &str, temp_file: &Path) -> Result<()>;
 
-    /// Optional preamble to prepend to all code blocks
-    fn preamble(&self) -> Option<&str> {
-        None
-    }
-
-    /// Extract identifiers (function names, class names, etc.) from the code
-    /// Used for generating descriptive temporary file names
+    /// Extracts identifiers (function names, class names, etc.) from the code.
+    ///
+    /// Used for generating descriptive temporary file names. The default
+    /// implementation returns an empty vector.
     fn extract_identifiers(&self, _code: &str) -> Vec<String> {
         Vec::new()
     }
 }
 
-/// A language configured from book.toml
+/// A language implementation configured from `book.toml`.
+///
+/// This struct represents a language whose behavior is entirely determined by
+/// configuration rather than hardcoded logic. It implements the `Language` trait
+/// using the compiler path, flags, and preamble specified in the configuration.
+///
+/// # Configuration-Driven Design
+///
+/// All compilation behavior comes from `book.toml`:
+/// - Compiler path (with `${VAR}` environment variable expansion)
+/// - Compiler flags (array of strings)
+/// - Optional preamble (prepended to all blocks)
+/// - Fence markers (which markdown fences map to this language)
 pub struct ConfiguredLanguage {
     name: String,
     config: LanguageConfig,
+    file_extension: String,
 }
 
 impl ConfiguredLanguage {
     pub fn new(name: String, config: LanguageConfig) -> Self {
-        Self { name, config }
+        let file_extension = Self::determine_file_extension(&config.fence_markers);
+        Self {
+            name,
+            config,
+            file_extension,
+        }
     }
 
     /// Determine file extension from fence markers (first marker + common extensions)
-    fn determine_file_extension(&self) -> String {
-        if let Some(first_marker) = self.config.fence_markers.first() {
+    fn determine_file_extension(fence_markers: &[String]) -> String {
+        if let Some(first_marker) = fence_markers.first() {
             match first_marker.as_str() {
                 "c" | "parasol-c" | "parasol" => ".c".to_string(),
                 "cpp" | "c++" | "cxx" => ".cpp".to_string(),
@@ -80,9 +131,7 @@ impl Language for ConfiguredLanguage {
     }
 
     fn file_extension(&self) -> &str {
-        // We need a static lifetime, so we'll recalculate each time
-        // In practice this is called infrequently
-        Box::leak(self.determine_file_extension().into_boxed_str())
+        &self.file_extension
     }
 
     fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
@@ -123,23 +172,38 @@ impl Language for ConfiguredLanguage {
         Ok(())
     }
 
-    fn preamble(&self) -> Option<&str> {
-        self.config.preamble.as_deref()
-    }
-
     fn extract_identifiers(&self, _code: &str) -> Vec<String> {
         // No identifier extraction - return empty vec
         Vec::new()
     }
 }
 
-/// Registry of available languages
+/// Registry of available languages for code validation.
+///
+/// The registry is built from the configuration and provides lookup
+/// functionality to find languages by their fence markers.
+///
+/// # Example
+///
+/// ```ignore
+/// let config = CheckCodeConfig::from_preprocessor_context(&ctx)?;
+/// let registry = LanguageRegistry::from_config(&config);
+///
+/// // Find a language by fence marker
+/// if let Some(lang) = registry.find_by_fence("c") {
+///     lang.compile(code, &temp_file)?;
+/// }
+/// ```
 pub struct LanguageRegistry {
     languages: Vec<Box<dyn Language>>,
 }
 
 impl LanguageRegistry {
-    /// Create a new language registry from configuration
+    /// Creates a new language registry from configuration.
+    ///
+    /// Only enabled languages are included in the registry. Each language
+    /// is instantiated as a `ConfiguredLanguage` based on its settings
+    /// in `book.toml`.
     pub fn from_config(config: &CheckCodeConfig) -> Self {
         let mut languages: Vec<Box<dyn Language>> = Vec::new();
 
@@ -155,7 +219,24 @@ impl LanguageRegistry {
         Self { languages }
     }
 
-    /// Find a language by its fence marker
+    /// Finds a language by its fence marker.
+    ///
+    /// # Arguments
+    ///
+    /// * `fence` - The fence marker from a markdown code block (e.g., "c", "ts")
+    ///
+    /// # Returns
+    ///
+    /// * `Some(&dyn Language)` if a language with this fence marker exists
+    /// * `None` if no language is configured for this fence marker
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// if let Some(lang) = registry.find_by_fence("parasol-c") {
+    ///     println!("Found language: {}", lang.name());
+    /// }
+    /// ```
     pub fn find_by_fence(&self, fence: &str) -> Option<&dyn Language> {
         self.languages
             .iter()
