@@ -72,9 +72,9 @@
           };
         };
 
-        # Build the mdbook-check-parasol preprocessor
-        mdbook-check-parasol = pkgs.rustPlatform.buildRustPackage {
-          pname = "mdbook-check-parasol";
+        # Build the mdbook-check-code preprocessor
+        mdbook-check-code = pkgs.rustPlatform.buildRustPackage {
+          pname = "mdbook-check-code";
           version = "0.1.0";
           src = gitignoreSource ./.;
 
@@ -85,21 +85,21 @@
           nativeBuildInputs = [ pkgs.pkg-config ];
 
           meta = with pkgs.lib; {
-            description = "mdBook preprocessor for checking Parasol C code blocks";
-            homepage = "https://github.com/Sunscreen-tech/mdbook-check-parasol";
+            description = "mdBook preprocessor for checking code blocks in multiple languages (Parasol C, C, TypeScript)";
+            homepage = "https://github.com/Sunscreen-tech/mdbook-check-code";
             license = licenses.mit;
           };
         };
       in {
 
         packages = {
-          inherit mdbook-check-parasol sunscreen-llvm;
-          default = mdbook-check-parasol;
+          inherit mdbook-check-code sunscreen-llvm;
+          default = mdbook-check-code;
         };
 
         checks = {
           # Build check
-          build = mdbook-check-parasol;
+          build = mdbook-check-code;
         };
 
         devShell = with pkgs;
@@ -117,8 +117,9 @@
               # mdbook tools
               mdbook
 
-              # The preprocessor itself
-              mdbook-check-parasol
+              # TypeScript support
+              nodejs
+              nodePackages.typescript
             ];
 
             shellHook = ''
@@ -126,8 +127,10 @@
 
               echo "Development environment loaded."
               echo "Available tools:"
-              echo "  mdbook-check-parasol - The preprocessor binary"
+              echo "  cargo                - Build with 'cargo build'"
               echo "  clang (parasol)      - ${sunscreen-llvm}/bin/clang"
+              echo "  node                 - Node.js runtime"
+              echo "  tsc                  - TypeScript compiler"
               echo ""
               echo "Environment variables:"
               echo "  CLANG=${sunscreen-llvm}/bin/clang"

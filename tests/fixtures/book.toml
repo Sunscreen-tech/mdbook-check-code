@@ -5,7 +5,29 @@ multilingual = false
 src = "src"
 title = "Test Book"
 
-[preprocessor.check-parasol]
-command = "/Users/ryan/code/mdbook-check-parasol/target/release/mdbook-check-parasol"
+[preprocessor.check-code]
+command = "../../target/release/mdbook-check-code"
+
+# Parasol C configuration
+[preprocessor.check-code.languages.parasol-c]
+enabled = true
+compiler = "${CLANG}"
+flags = ["-target", "parasol", "-fsyntax-only"]
+preamble = "#include <parasol.h>"
+fence_markers = ["parasol-c", "parasol"]
+
+# Plain C configuration
+[preprocessor.check-code.languages.c]
+enabled = true
+compiler = "gcc"
+flags = ["-fsyntax-only"]
+fence_markers = ["c"]
+
+# TypeScript configuration
+[preprocessor.check-code.languages.typescript]
+enabled = true
+compiler = "tsc"
+flags = ["--noEmit", "--skipLibCheck"]
+fence_markers = ["typescript", "ts"]
 
 [output.html]

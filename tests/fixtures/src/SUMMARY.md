@@ -1,5 +1,7 @@
 # Summary
 
 - [Introduction](intro.md)
-- [Basic Example](basic.md)
-- [Propagate Example](propagate.md)
+- [Parasol C Basic Example](basic.md)
+- [Parasol C Propagate Example](propagate.md)
+- [Plain C Example](c_example.md)
+- [TypeScript Example](typescript_example.md)
