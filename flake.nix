@@ -6,9 +6,13 @@
       url = "github:hercules-ci/gitignore.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, utils, gitignore }:
+  outputs = { self, nixpkgs, utils, gitignore, flake-compat }:
     utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -84,10 +88,43 @@
 
           nativeBuildInputs = [ pkgs.pkg-config ];
 
+          nativeCheckInputs = [
+            pkgs.rustfmt
+            pkgs.clippy
+            pkgs.mdbook
+            sunscreen-llvm
+            pkgs.nodejs
+            pkgs.nodePackages.typescript
+          ];
+
+          # Override checkPhase to run fmt, clippy, tests, and fixture validation
+          checkPhase = ''
+            runHook preCheck
+
+            echo "Running cargo fmt check..."
+            cargo fmt --check
+
+            echo "Running clippy on workspace only (not dependencies)..."
+            cargo clippy --all-targets --workspace -- -D warnings
+
+            echo "Running tests..."
+            cargo test --release
+
+            echo "Testing mdbook fixtures with built preprocessor..."
+            export CLANG="${sunscreen-llvm}/bin/clang"
+            export PATH="$PWD/target/release:$PATH"
+            cd tests/fixtures
+            mdbook build
+            cd ../..
+
+            runHook postCheck
+          '';
+
           meta = with pkgs.lib; {
-            description = "mdBook preprocessor for checking code blocks in multiple languages (Parasol C, C, TypeScript)";
+            description = "mdBook preprocessor for checking code blocks in multiple languages";
             homepage = "https://github.com/Sunscreen-tech/mdbook-check-code";
             license = licenses.agpl3Only;
+            mainProgram = "mdbook-check-code";
           };
         };
       in {
@@ -97,12 +134,12 @@
           default = mdbook-check-code;
         };
 
-        checks = {
-          # Build check
-          build = mdbook-check-code;
+        apps.default = {
+          type = "app";
+          program = "${mdbook-check-code}/bin/mdbook-check-code";
         };
 
-        devShell = with pkgs;
+        devShells.default = with pkgs;
           mkShellNoCC {
             nativeBuildInputs = [
               # Rust toolchain
