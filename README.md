@@ -9,6 +9,7 @@ An mdBook preprocessor that validates Parasol C code blocks by compiling them wi
 ## Features
 
 - **Automatic validation**: Compiles all C code blocks during book build
+- **Automatic preamble**: Automatically includes `#include <parasol.h>` for all code blocks
 - **Selective compilation**: Supports `ignore` flag to skip specific code blocks
 - **Code propagation**: Use the `propagate` flag to share code between blocks (useful for structs and helper functions)
 - **mdBook integration**: Works seamlessly with mdBook's build process
@@ -59,7 +60,7 @@ command = "mdbook-check-parasol"
 
 ### Write your documentation
 
-Use standard markdown with C code blocks:
+Use standard markdown with C code blocks. The preprocessor automatically includes `#include <parasol.h>` as a preamble for all code blocks, so you don't need to add it yourself (though it's harmless if you do):
 
 ````markdown
 # My FHE Program
@@ -67,8 +68,6 @@ Use standard markdown with C code blocks:
 Here's a simple addition program:
 
 ```c
-#include <parasol.h>
-
 [[clang::fhe_program]] uint8_t add(
     [[clang::encrypted]] uint8_t a,
     [[clang::encrypted]] uint8_t b
@@ -77,6 +76,8 @@ Here's a simple addition program:
 }
 ```
 ````
+
+**Note**: The preprocessor automatically prepends `#include <parasol.h>` to all C code blocks before compilation.
 
 ### Build your book
 

@@ -136,8 +136,9 @@ fn process_chapter_code_blocks(
         let mut temp_file = File::create(&temp_file_path)
             .context("Failed to create temporary C file")?;
 
-        // Write the code block to the temporary file
-        // Note: No preamble needed - compiler now has #include<parasol.h>
+        // Write the preamble and code block to the temporary file
+        writeln!(temp_file, "#include <parasol.h>")?;
+        writeln!(temp_file)?;
         writeln!(temp_file, "{}", code_block)?;
 
         eprintln!("  Compiling {block_name}");

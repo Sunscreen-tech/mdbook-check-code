@@ -6,6 +6,6 @@ src = "src"
 title = "Test Book"
 
 [preprocessor.check-parasol]
-command = "mdbook-check-parasol"
+command = "/Users/ryan/code/mdbook-check-parasol/target/release/mdbook-check-parasol"
 
 [output.html]
