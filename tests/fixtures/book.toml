@@ -1,0 +1,11 @@
+[book]
+authors = ["Test Author"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Test Book"
+
+[preprocessor.check-parasol]
+command = "mdbook-check-parasol"
+
+[output.html]
