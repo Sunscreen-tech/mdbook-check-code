@@ -23,77 +23,21 @@
         inherit (gitignore.lib) gitignoreSource;
 
         # Sunscreen LLVM compiler for parasol target
-        sunscreen-llvm = pkgs.stdenv.mkDerivation rec {
-          pname = "sunscreen-llvm";
-          version = "2025.09.30";
-          # Asset filenames use dashes instead of dots in the date
-          fileVersion = "2025-09-30";
+        sunscreen-llvm = pkgs.callPackage ./sunscreen-llvm.nix { };
 
-          src = let
-            urlBase =
-              "https://github.com/Sunscreen-tech/sunscreen-llvm/releases/download/v${version}";
-          in if pkgs.stdenv.isDarwin then
-            pkgs.fetchurl {
-              url =
-                "${urlBase}/parasol-compiler-macos-aarch64-${fileVersion}.tar.gz";
-              sha256 = "0ra93mji3j9km7ia21gsqswn49a3abwc1ml1xq643hzq4xigyqjd";
-            }
-          else if pkgs.stdenv.isAarch64 then
-            pkgs.fetchurl {
-              url =
-                "${urlBase}/parasol-compiler-linux-aarch64-${fileVersion}.tar.gz";
-              sha256 = "197fybbjvimnyqwwn3q7s9yrljbqp57s42n9znpckmnbcbp8p373";
-            }
-          else
-            pkgs.fetchurl {
-              url =
-                "${urlBase}/parasol-compiler-linux-x86-64-${fileVersion}.tar.gz";
-              sha256 = "1p0418nqzs6a2smrbqiyrxj34pimm6qzj7k29l4ys226cz6kfz2r";
-            };
+        # Build mdbook-check-code using package.nix
+        mdbook-check-code =
+          pkgs.callPackage ./package.nix { inherit craneLib gitignoreSource; };
 
-          nativeBuildInputs =
-            pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.autoPatchelfHook ];
-
-          buildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [
-            pkgs.stdenv.cc.cc.lib # Provides libstdc++ and libgcc_s
-            pkgs.zlib
-          ];
-
-          sourceRoot = ".";
-
-          unpackPhase = ''
-            tar -xzf $src
-          '';
-
-          installPhase = ''
-            mkdir -p $out
-            cp -r * $out/
-          '';
-
-          meta = with pkgs.lib; {
-            description =
-              "Sunscreen LLVM compiler for parasol target (FHE compilation)";
-            homepage = "https://github.com/Sunscreen-tech/sunscreen-llvm";
-            license = licenses.agpl3Only;
-            platforms = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
-          };
-        };
-
-        fixture-src = gitignoreSource ./tests/fixtures;
+        # For checks: need to recreate src, commonArgs, and cargoArtifacts
         src = craneLib.cleanCargoSource ./.;
         commonArgs = {
           inherit src;
           strictDeps = true;
         };
-
-        # Build *just* the cargo dependencies, so we can reuse
-        # all of that work (e.g. via cachix) when running in CI
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-        # Build the actual crate itself, reusing the dependency
-        # artifacts from above.
-        mdbook-check-code =
-          craneLib.buildPackage (commonArgs // { inherit cargoArtifacts; });
+        fixture-src = gitignoreSource ./tests/fixtures;
 
       in {
         packages = {
