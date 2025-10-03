@@ -5,6 +5,53 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
+/// Get default fence markers for a language based on highlight.js language definitions.
+///
+/// This function returns the canonical language name plus common aliases that highlight.js
+/// recognizes for syntax highlighting. If no built-in mapping exists, returns just the
+/// language name itself.
+///
+/// # Arguments
+///
+/// * `lang_name` - The language name from the configuration section (e.g., "c", "typescript")
+///
+/// # Returns
+///
+/// A vector of fence marker strings that should recognize this language in markdown.
+///
+/// # Examples
+///
+/// ```ignore
+/// assert_eq!(get_default_fence_markers("c"), vec!["c", "h"]);
+/// assert_eq!(get_default_fence_markers("typescript"), vec!["typescript", "ts", "tsx", "mts", "cts"]);
+/// assert_eq!(get_default_fence_markers("unknown"), vec!["unknown"]);
+/// ```
+///
+/// # Reference
+///
+/// Language aliases are based on highlight.js SUPPORTED_LANGUAGES.md:
+/// https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md
+pub fn get_default_fence_markers(lang_name: &str) -> Vec<String> {
+    match lang_name {
+        "c" => vec!["c", "h"],
+        "cpp" => vec!["cpp", "hpp", "cc", "hh", "c++", "h++", "cxx", "hxx"],
+        "typescript" => vec!["typescript", "ts", "tsx", "mts", "cts"],
+        "rust" => vec!["rust", "rs"],
+        "python" => vec!["python", "py", "gyp"],
+        "javascript" => vec!["javascript", "js", "jsx"],
+        "solidity" => vec!["solidity", "sol"],
+        "go" => vec!["go", "golang"],
+        "java" => vec!["java", "jsp"],
+        "kotlin" => vec!["kotlin", "kt"],
+        "ruby" => vec!["ruby", "rb", "gemspec", "podspec", "thor", "irb"],
+        // Default: use the language name itself
+        _ => vec![lang_name],
+    }
+    .iter()
+    .map(|s| s.to_string())
+    .collect()
+}
+
 /// Trait for language-specific compilation and validation.
 ///
 /// This trait defines the interface for validating code blocks in different
@@ -33,12 +80,6 @@ use std::process::Command;
 pub trait Language: Send + Sync {
     /// Returns the name of this language (e.g., "parasol-c", "c", "typescript").
     fn name(&self) -> &str;
-
-    /// Returns the fence markers that identify this language in markdown.
-    ///
-    /// Multiple fence markers can map to the same language, e.g.,
-    /// `["typescript", "ts"]` for TypeScript.
-    fn fence_markers(&self) -> &[String];
 
     /// Returns the file extension for this language (e.g., ".c", ".ts").
     fn file_extension(&self) -> &str;
@@ -126,10 +167,6 @@ impl Language for ConfiguredLanguage {
         &self.name
     }
 
-    fn fence_markers(&self) -> &[String] {
-        &self.config.fence_markers
-    }
-
     fn file_extension(&self) -> &str {
         &self.file_extension
     }
@@ -190,57 +227,111 @@ impl Language for ConfiguredLanguage {
 /// let registry = LanguageRegistry::from_config(&config);
 ///
 /// // Find a language by fence marker
-/// if let Some(lang) = registry.find_by_fence("c") {
+/// if let Some(lang) = registry.find_by_fence("c", None) {
 ///     lang.compile(code, &temp_file)?;
 /// }
 /// ```
 pub struct LanguageRegistry {
-    languages: Vec<Box<dyn Language>>,
+    config: CheckCodeConfig,
 }
 
 impl LanguageRegistry {
     /// Creates a new language registry from configuration.
     ///
-    /// Only enabled languages are included in the registry. Each language
-    /// is instantiated as a `ConfiguredLanguage` based on its settings
-    /// in `book.toml`.
+    /// The registry stores the configuration and creates language instances
+    /// on demand when `find_by_fence` is called.
     pub fn from_config(config: &CheckCodeConfig) -> Self {
-        let mut languages: Vec<Box<dyn Language>> = Vec::new();
-
-        for (name, lang_config) in config.languages() {
-            if lang_config.enabled {
-                languages.push(Box::new(ConfiguredLanguage::new(
-                    name.clone(),
-                    lang_config.clone(),
-                )));
-            }
+        Self {
+            config: config.clone(),
         }
-
-        Self { languages }
     }
 
-    /// Finds a language by its fence marker.
+    /// Finds a language by its fence marker and optional variant.
     ///
     /// # Arguments
     ///
     /// * `fence` - The fence marker from a markdown code block (e.g., "c", "ts")
+    /// * `variant` - Optional variant name (e.g., Some("parasol") for C with Parasol compiler)
     ///
     /// # Returns
     ///
-    /// * `Some(&dyn Language)` if a language with this fence marker exists
+    /// * `Some(Box<dyn Language>)` if a language with this fence marker exists
     /// * `None` if no language is configured for this fence marker
+    ///
+    /// # Variant Handling
+    ///
+    /// When a variant is specified, the variant's configuration (compiler, flags, preamble)
+    /// overrides the base language configuration. The variant inherits fence_markers and
+    /// file_extension from the base language.
     ///
     /// # Example
     ///
     /// ```ignore
-    /// if let Some(lang) = registry.find_by_fence("parasol-c") {
+    /// // Base C language
+    /// if let Some(lang) = registry.find_by_fence("c", None) {
+    ///     println!("Found language: {}", lang.name());
+    /// }
+    ///
+    /// // Parasol variant of C
+    /// if let Some(lang) = registry.find_by_fence("c", Some("parasol")) {
     ///     println!("Found language: {}", lang.name());
     /// }
     /// ```
-    pub fn find_by_fence(&self, fence: &str) -> Option<&dyn Language> {
-        self.languages
-            .iter()
-            .find(|lang| lang.fence_markers().contains(&fence.to_string()))
-            .map(|boxed| boxed.as_ref())
+    pub fn find_by_fence(&self, fence: &str, variant: Option<&str>) -> Option<Box<dyn Language>> {
+        // Find the base language config by fence marker (using resolved fence markers)
+        let (lang_name, base_config) = self.config.languages().iter().find(|(name, config)| {
+            if !config.enabled {
+                return false;
+            }
+            let fence_markers = config.get_fence_markers(name);
+            fence_markers.contains(&fence.to_string())
+        })?;
+
+        // If no variant is specified, create base language with resolved fence markers
+        let variant_name = match variant {
+            None => {
+                // Get resolved fence markers for the base language
+                let resolved_fence_markers = base_config.get_fence_markers(lang_name);
+
+                // Create config with resolved fence markers
+                let resolved_config = crate::config::LanguageConfig {
+                    enabled: base_config.enabled,
+                    compiler: base_config.compiler.clone(),
+                    flags: base_config.flags.clone(),
+                    preamble: base_config.preamble.clone(),
+                    fence_markers: resolved_fence_markers,
+                    variants: base_config.variants.clone(),
+                };
+
+                return Some(Box::new(ConfiguredLanguage::new(
+                    lang_name.clone(),
+                    resolved_config,
+                )));
+            }
+            Some(v) => v,
+        };
+
+        // Look up the variant config
+        let variant_config = base_config.variants.get(variant_name)?;
+
+        // Get resolved fence markers from base config
+        let resolved_fence_markers = base_config.get_fence_markers(lang_name);
+
+        // Create merged config: variant settings override base settings
+        let merged_config = crate::config::LanguageConfig {
+            enabled: base_config.enabled,
+            compiler: variant_config.compiler.clone(),
+            flags: variant_config.flags.clone(),
+            preamble: variant_config.preamble.clone(),
+            fence_markers: resolved_fence_markers,
+            variants: std::collections::HashMap::new(), // Variants don't inherit variants
+        };
+
+        // Create a new language with variant-specific name
+        let variant_lang_name = format!("{}-{}", lang_name, variant_name);
+        Some(Box::new(ConfiguredLanguage::new(
+            variant_lang_name,
+            merged_config,
+        )))
     }
 }

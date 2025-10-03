@@ -203,11 +203,11 @@ fn process_chapter(
                 final_code.len()
             );
         }
-        // Find the language implementation
-        let language = match registry.find_by_fence(&block.language) {
+        // Find the language implementation (with optional variant)
+        let language = match registry.find_by_fence(&block.language, block.variant.as_deref()) {
             Some(lang) => lang,
             None => {
-                // Unknown language, skip silently
+                // Unknown language or variant, skip silently
                 continue;
             }
         };

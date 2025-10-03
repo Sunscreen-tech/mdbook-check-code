@@ -97,7 +97,7 @@
 
       in {
         packages = {
-          inherit mdbook-check-code;
+          inherit mdbook-check-code sunscreen-llvm;
           default = mdbook-check-code;
         };
 
@@ -130,9 +130,10 @@
               sunscreen-llvm
               gcc
 
-              # TypeScript compiler
+              # Language compilers
               nodejs
               nodePackages.typescript
+              solc
             ];
           } ''
             cp -r ${fixture-src}/* $TMPDIR/
@@ -152,22 +153,24 @@
 
             # After the build is successful, copy the final output to the expected $out path.
             mkdir $out
-            cp -r $TMPDIR/tests/fixtures/book/* $out
+            cp -r $TMPDIR/book/* $out
           '';
         };
 
         devShells.default = with pkgs;
           craneLib.devShell {
-            nativeBuildInputs = [
-              # FHE compiler
+            buildInputs = [
+              # C compilers
               sunscreen-llvm
+              gcc
 
               # mdbook tools
               mdbook
 
-              # TypeScript support
+              # Language compilers
               nodejs
               nodePackages.typescript
+              solc
             ];
 
             shellHook = ''
@@ -177,8 +180,10 @@
               echo "Available tools:"
               echo "  cargo                - Build with 'cargo build'"
               echo "  clang (parasol)      - ${sunscreen-llvm}/bin/clang"
+              echo "  gcc                  - C compiler"
               echo "  node                 - Node.js runtime"
               echo "  tsc                  - TypeScript compiler"
+              echo "  solc                 - Solidity compiler"
               echo ""
               echo "Environment variables:"
               echo "  CLANG=${sunscreen-llvm}/bin/clang"

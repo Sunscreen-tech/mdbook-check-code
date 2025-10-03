@@ -10,8 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    name: Quality Checks
+  build:
+    name: Build
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -25,8 +25,62 @@ jobs:
       - name: Setup Magic Nix Cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Run quality checks (fmt, clippy, tests)
-        run: nix build .#mdbook-check-code
+      - name: Build package
+        run: nix build .#checks.x86_64-linux.mdbook-check-code
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Run clippy
+        run: nix build .#checks.x86_64-linux.mdbook-check-code-clippy
+
+  formatting:
+    name: Formatting
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Check formatting
+        run: nix build .#checks.x86_64-linux.mdbook-check-code-fmt
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Run integration tests
+        run: nix build .#checks.x86_64-linux.runE2ETests
 
   #build:
   #  name: Build ${{ matrix.system }}
