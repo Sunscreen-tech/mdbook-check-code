@@ -6,9 +6,13 @@
       url = "github:ipetkov/crane";
       # inputs.nixpkgs.follows = "nixpkgs";
     };
+    gitignore = {
+      url = "github:hercules-ci/gitignore.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, utils, crane }:
+  outputs = { self, nixpkgs, utils, crane, gitignore }:
     utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -16,6 +20,7 @@
           config = { allowUnfree = true; };
         };
         craneLib = crane.mkLib pkgs;
+        inherit (gitignore.lib) gitignoreSource;
 
         # Sunscreen LLVM compiler for parasol target
         sunscreen-llvm = pkgs.stdenv.mkDerivation rec {
@@ -74,7 +79,7 @@
           };
         };
 
-        src = craneLib.cleanCargoSource (craneLib.path ./.);
+        src = gitignoreSource ./.; # The original source
         commonArgs = {
           inherit src;
           strictDeps = true;
@@ -129,16 +134,19 @@
               nodePackages.typescript
             ];
           } ''
-            mkdir -p $out
-            cp -r ${src}/tests/fixtures/ $out/
-            cd $out/fixtures
-            ls
-            echo "printing out src"
-            ls src
+            cp -r ${src}/tests/fixtures/ $TMPDIR/
+            cd $TMPDIR/fixtures
 
             export CLANG="${sunscreen-llvm}/bin/clang"
-            export PATH="$PATH:${mdbook-check-code}/bin"
             export RUST_LOG=info
+
+            # Replace location for the
+            # [preprocessor.check-code]
+            #command = "../../target/release/mdbook-check-code"
+            # to be the build output of this flake in the book.toml
+            # Without backup
+            sed -i "s|../../target/release/mdbook-check-code|${mdbook-check-code}/bin/mdbook-check-code|g" book.toml
+            cat book.toml
 
             mdbook build
 
