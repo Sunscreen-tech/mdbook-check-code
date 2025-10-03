@@ -212,22 +212,8 @@ fn process_chapter(
             }
         };
 
-        // Extract identifiers for better naming
-        let identifiers = language.extract_identifiers(&block.code);
-
         // Generate a descriptive name for this code block
-        let block_name = if identifiers.is_empty() {
-            format!("{}_{}_block_{}", language.name(), chapter_name, i)
-        } else {
-            let ident_str = identifiers.join("_");
-            format!(
-                "{}_{}_{}_block_{}",
-                language.name(),
-                chapter_name,
-                ident_str,
-                i
-            )
-        };
+        let block_name = format!("{}_{}_block_{}", language.name(), chapter_name, i);
 
         let temp_file_path =
             temp_dir

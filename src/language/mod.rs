@@ -109,72 +109,11 @@ pub fn get_default_fence_markers(lang_name: &str) -> Vec<String> {
     .collect()
 }
 
-/// Trait for language-specific compilation and validation.
-///
-/// This trait defines the interface for validating code blocks in different
-/// programming languages. Implementations must be thread-safe (`Send + Sync`)
-/// to support potential parallel compilation in the future.
-///
-/// # Example Implementation
-///
-/// ```ignore
-/// struct MyLanguage {
-///     name: String,
-///     fence_markers: Vec<String>,
-///     file_extension: String,
-/// }
-///
-/// impl Language for MyLanguage {
-///     fn name(&self) -> &str { &self.name }
-///     fn fence_markers(&self) -> &[String] { &self.fence_markers }
-///     fn file_extension(&self) -> &str { &self.file_extension }
-///     fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
-///         // Validation logic here
-///         Ok(())
-///     }
-/// }
-/// ```
-pub trait Language: Send + Sync {
-    /// Returns the name of this language (e.g., "parasol-c", "c", "typescript").
-    fn name(&self) -> &str;
-
-    /// Returns the file extension for this language (e.g., ".c", ".ts").
-    fn file_extension(&self) -> &str;
-
-    /// Compiles or validates the given code.
-    ///
-    /// # Arguments
-    ///
-    /// * `code` - The source code to validate (may include preambles)
-    /// * `temp_file` - Path where the code should be written for compilation
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(())` if compilation succeeds
-    /// * `Err` with compilation error details if it fails
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The temporary file cannot be created or written
-    /// - The compiler executable cannot be found or executed
-    /// - The code fails to compile
-    fn compile(&self, code: &str, temp_file: &Path) -> Result<()>;
-
-    /// Extracts identifiers (function names, class names, etc.) from the code.
-    ///
-    /// Used for generating descriptive temporary file names. The default
-    /// implementation returns an empty vector.
-    fn extract_identifiers(&self, _code: &str) -> Vec<String> {
-        Vec::new()
-    }
-}
-
 /// A language implementation configured from `book.toml`.
 ///
 /// This struct represents a language whose behavior is entirely determined by
-/// configuration rather than hardcoded logic. It implements the `Language` trait
-/// using the compiler path, flags, and preamble specified in the configuration.
+/// configuration rather than hardcoded logic, using the compiler path, flags,
+/// and preamble specified in the configuration.
 ///
 /// # Configuration-Driven Design
 ///
@@ -199,6 +138,16 @@ impl ConfiguredLanguage {
         }
     }
 
+    /// Returns the name of this language (e.g., "c", "c-parasol", "typescript").
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the file extension for this language (e.g., ".c", ".ts").
+    pub fn file_extension(&self) -> &str {
+        &self.file_extension
+    }
+
     /// Determine file extension from fence markers (first marker + common extensions)
     fn determine_file_extension(fence_markers: &[String]) -> String {
         if let Some(first_marker) = fence_markers.first() {
@@ -217,18 +166,26 @@ impl ConfiguredLanguage {
             ".txt".to_string()
         }
     }
-}
 
-impl Language for ConfiguredLanguage {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn file_extension(&self) -> &str {
-        &self.file_extension
-    }
-
-    fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
+    /// Compiles or validates the given code.
+    ///
+    /// # Arguments
+    ///
+    /// * `code` - The source code to validate (may include preambles)
+    /// * `temp_file` - Path where the code should be written for compilation
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if compilation succeeds
+    /// * `Err` with compilation error details if it fails
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The temporary file cannot be created or written
+    /// - The compiler executable cannot be found or executed
+    /// - The code fails to compile
+    pub fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
         // Write code with optional preamble to temp file
         let mut file = File::create(temp_file).context("Failed to create temporary file")?;
 
@@ -264,11 +221,6 @@ impl Language for ConfiguredLanguage {
         }
 
         Ok(())
-    }
-
-    fn extract_identifiers(&self, _code: &str) -> Vec<String> {
-        // No identifier extraction - return empty vec
-        Vec::new()
     }
 }
 
@@ -334,7 +286,7 @@ impl LanguageRegistry {
     ///     println!("Found language: {}", lang.name());
     /// }
     /// ```
-    pub fn find_by_fence(&self, fence: &str, variant: Option<&str>) -> Option<Box<dyn Language>> {
+    pub fn find_by_fence(&self, fence: &str, variant: Option<&str>) -> Option<ConfiguredLanguage> {
         // Find the base language config by fence marker (using resolved fence markers)
         let (lang_name, base_config) = self.config.languages().iter().find(|(name, config)| {
             if !config.enabled {
@@ -360,10 +312,7 @@ impl LanguageRegistry {
                     variants: base_config.variants.clone(),
                 };
 
-                return Some(Box::new(ConfiguredLanguage::new(
-                    lang_name.clone(),
-                    resolved_config,
-                )));
+                return Some(ConfiguredLanguage::new(lang_name.clone(), resolved_config));
             }
             Some(v) => v,
         };
@@ -386,9 +335,6 @@ impl LanguageRegistry {
 
         // Create a new language with variant-specific name
         let variant_lang_name = format!("{}-{}", lang_name, variant_name);
-        Some(Box::new(ConfiguredLanguage::new(
-            variant_lang_name,
-            merged_config,
-        )))
+        Some(ConfiguredLanguage::new(variant_lang_name, merged_config))
     }
 }
