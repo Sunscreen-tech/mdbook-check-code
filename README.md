@@ -8,7 +8,8 @@ A configuration-driven mdBook preprocessor that validates code blocks in multipl
 
 ## Features
 
-- **Multi-language support**: Parasol C, plain C, TypeScript, or any language you configure
+- **Multi-language support**: C, TypeScript, Solidity, or any language you configure
+- **Language variants**: Define variants with different compilers (e.g., Parasol C for FHE)
 - **Configuration-driven**: All compiler behavior specified in `book.toml` - no hardcoded defaults
 - **Environment variable expansion**: Use `${VAR}` syntax in compiler paths
 - **No regex**: Uses `pulldown-cmark` for clean markdown parsing
@@ -61,27 +62,28 @@ authors = ["Your Name"]
 [preprocessor.check-code]
 command = "mdbook-check-code"
 
-# Configure Parasol C (FHE code)
-[preprocessor.check-code.languages.parasol-c]
-enabled = true
-compiler = "${CLANG}"                           # Environment variable expansion
-flags = ["-target", "parasol", "-fsyntax-only"]
-preamble = "#include <parasol.h>"               # Automatically included
-fence_markers = ["parasol-c", "parasol"]
-
-# Configure plain C
+# C configuration
 [preprocessor.check-code.languages.c]
 enabled = true
 compiler = "gcc"
 flags = ["-fsyntax-only"]
-fence_markers = ["c"]
 
-# Configure TypeScript
+# Parasol variant - uses Sunscreen LLVM for FHE compilation
+[preprocessor.check-code.languages.c.variants.parasol]
+compiler = "${CLANG}"                    # Environment variable expansion
+flags = ["-target", "parasol", "-fsyntax-only"]
+preamble = "#include <parasol.h>"        # Prepended to all blocks
+
+# TypeScript configuration
 [preprocessor.check-code.languages.typescript]
 enabled = true
 compiler = "tsc"
 flags = ["--noEmit", "--skipLibCheck"]
-fence_markers = ["typescript", "ts"]
+
+# Solidity configuration
+[preprocessor.check-code.languages.solidity]
+enabled = true
+compiler = "solc"
 
 [output.html]
 ```
@@ -93,7 +95,7 @@ Use standard markdown with code blocks. The fence marker determines which langua
 ````markdown
 # Parasol C Example
 
-```parasol-c
+```c,variant=parasol
 [[clang::fhe_program]] uint8_t add(
     [[clang::encrypted]] uint8_t a,
     [[clang::encrypted]] uint8_t b
@@ -140,7 +142,7 @@ The preprocessor will automatically validate all configured code blocks and repo
 Use this flag for code that shouldn't be compiled (e.g., pseudocode, incomplete examples):
 
 ````markdown
-```parasol-c,ignore
+```c,ignore
 // This won't be compiled
 incomplete_function() {
 ```
@@ -153,7 +155,7 @@ Use this flag to make definitions available to subsequent code blocks in the sam
 ````markdown
 Define a struct:
 
-```parasol-c,propagate
+```c,variant=parasol,propagate
 typedef struct Point {
     uint16_t x;
     uint16_t y;
@@ -162,7 +164,7 @@ typedef struct Point {
 
 Use the struct in later blocks:
 
-```parasol-c
+```c,variant=parasol
 [[clang::fhe_program]] void move_point(
     [[clang::encrypted]] Point *p,
     uint16_t dx,
@@ -184,10 +186,36 @@ Each language requires a full configuration in `book.toml`:
 - `enabled` (bool): Whether to check this language
 - `compiler` (string): Compiler executable (supports `${VAR}` env var expansion)
 - `flags` (array): Compiler flags
-- `fence_markers` (array): Which markdown fence markers identify this language
 
 **Optional fields**:
 - `preamble` (string): Code prepended to all blocks (e.g., includes)
+- `fence_markers` (array): Custom fence identifiers (e.g., `["ts", "typescript"]`)
+
+### Language Variants
+
+You can define variants of a language that use different compilers or flags:
+
+```toml
+# Base language
+[preprocessor.check-code.languages.c]
+enabled = true
+compiler = "gcc"
+flags = ["-fsyntax-only"]
+
+# Parasol variant for FHE code
+[preprocessor.check-code.languages.c.variants.parasol]
+compiler = "${CLANG}"
+flags = ["-target", "parasol", "-fsyntax-only"]
+preamble = "#include <parasol.h>"
+```
+
+Variants are referenced using the `variant=name` attribute in the fence marker:
+
+````markdown
+```c,variant=parasol
+// Your Parasol C code here
+```
+````
 
 ### Adding New Languages
 
@@ -198,8 +226,12 @@ Add any language by configuring it in `book.toml`. Example for Python with mypy:
 enabled = true
 compiler = "mypy"
 flags = ["--ignore-missing-imports"]
+# Optional: specify custom fence markers
 fence_markers = ["python", "py"]
 ```
+
+By default, the language name is used as the fence marker (e.g., `python`). Use
+`fence_markers` to add aliases or override the default behavior.
 
 ### Environment Variables
 
@@ -227,7 +259,7 @@ When using `nix develop`, the environment is automatically configured with:
 
 ## Testing
 
-Test the preprocessor on the included fixtures (includes Parasol C, plain C, and TypeScript examples):
+Test the preprocessor on the included fixtures (includes C, Parasol C variant, TypeScript, and Solidity examples):
 
 ```bash
 # Using Nix (recommended - includes all compilers)
