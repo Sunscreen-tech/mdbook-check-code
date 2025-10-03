@@ -203,31 +203,17 @@ fn process_chapter(
                 final_code.len()
             );
         }
-        // Find the language implementation
-        let language = match registry.find_by_fence(&block.language) {
+        // Find the language implementation (with optional variant)
+        let language = match registry.find_by_fence(&block.language, block.variant.as_deref()) {
             Some(lang) => lang,
             None => {
-                // Unknown language, skip silently
+                // Unknown language or variant, skip silently
                 continue;
             }
         };
 
-        // Extract identifiers for better naming
-        let identifiers = language.extract_identifiers(&block.code);
-
         // Generate a descriptive name for this code block
-        let block_name = if identifiers.is_empty() {
-            format!("{}_{}_block_{}", language.name(), chapter_name, i)
-        } else {
-            let ident_str = identifiers.join("_");
-            format!(
-                "{}_{}_{}_block_{}",
-                language.name(),
-                chapter_name,
-                ident_str,
-                i
-            )
-        };
+        let block_name = format!("{}_{}_block_{}", language.name(), chapter_name, i);
 
         let temp_file_path =
             temp_dir

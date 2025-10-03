@@ -16,6 +16,7 @@ use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 ///
 /// - `ignore` - Skip compilation for this block
 /// - `propagate` - Make code available to subsequent blocks in the same file
+/// - `variant=<name>` - Use a specific variant of the language
 ///
 /// # Example
 ///
@@ -24,14 +25,14 @@ use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 /// struct Point { int x, y; };
 /// ```
 ///
-/// ```c
-/// // Can use Point from the propagated block above
-/// struct Point p = {1, 2};
+/// ```c,variant=parasol
+/// // Use Parasol C compiler variant
+/// [[clang::fhe_program]] uint8_t add(uint8_t a, uint8_t b) { return a + b; }
 /// ```
 /// ````
 #[derive(Debug, Clone)]
 pub struct CodeBlock {
-    /// The programming language from the fence marker (e.g., "c", "typescript", "parasol-c")
+    /// The programming language from the fence marker (e.g., "c", "typescript", "rust")
     pub language: String,
     /// The actual code content
     pub code: String,
@@ -39,6 +40,8 @@ pub struct CodeBlock {
     pub ignore: bool,
     /// Whether this block's code should be propagated to subsequent blocks
     pub propagate: bool,
+    /// The variant of the language to use (e.g., "parasol" for C)
+    pub variant: Option<String>,
 }
 
 /// Extracts code blocks from markdown content using pulldown-cmark.
@@ -78,6 +81,7 @@ pub fn extract_code_blocks(content: &str) -> Vec<CodeBlock> {
     let mut current_language = String::new();
     let mut current_ignore = false;
     let mut current_propagate = false;
+    let mut current_variant = None;
 
     for event in parser {
         match event {
@@ -85,13 +89,14 @@ pub fn extract_code_blocks(content: &str) -> Vec<CodeBlock> {
                 in_code_block = true;
                 current_code.clear();
 
-                // Parse the fence info string (e.g., "c", "typescript,ignore", "parasol-c,propagate")
+                // Parse the fence info string (e.g., "c", "typescript,ignore", "c,variant=parasol")
                 let info_str = info.as_ref();
-                let (lang, flags) = parse_fence_info(info_str);
+                let (lang, flags, variant) = parse_fence_info(info_str);
 
                 current_language = lang;
                 current_ignore = flags.contains(&"ignore");
                 current_propagate = flags.contains(&"propagate");
+                current_variant = variant;
             }
 
             Event::End(TagEnd::CodeBlock) => {
@@ -101,6 +106,7 @@ pub fn extract_code_blocks(content: &str) -> Vec<CodeBlock> {
                         code: current_code.clone(),
                         ignore: current_ignore,
                         propagate: current_propagate,
+                        variant: current_variant.clone(),
                     });
 
                     in_code_block = false;
@@ -120,22 +126,33 @@ pub fn extract_code_blocks(content: &str) -> Vec<CodeBlock> {
     code_blocks
 }
 
-/// Parse fence info string into language and flags
+/// Parse fence info string into language, flags, and variant
 /// Examples:
-/// - "c" -> ("c", [])
-/// - "typescript,ignore" -> ("typescript", ["ignore"])
-/// - "parasol-c,propagate" -> ("parasol-c", ["propagate"])
-fn parse_fence_info(info: &str) -> (String, Vec<&str>) {
+/// - "c" -> ("c", [], None)
+/// - "typescript,ignore" -> ("typescript", ["ignore"], None)
+/// - "c,variant=parasol" -> ("c", [], Some("parasol"))
+/// - "c,propagate,variant=parasol" -> ("c", ["propagate"], Some("parasol"))
+fn parse_fence_info(info: &str) -> (String, Vec<&str>, Option<String>) {
     let parts: Vec<&str> = info.split(',').map(|s| s.trim()).collect();
 
     if parts.is_empty() {
-        return (String::new(), Vec::new());
+        return (String::new(), Vec::new(), None);
     }
 
     let language = parts[0].to_string();
-    let flags = parts[1..].to_vec();
+    let mut flags = Vec::new();
+    let mut variant = None;
 
-    (language, flags)
+    // Parse attributes (flags and variant)
+    for part in &parts[1..] {
+        if let Some(variant_value) = part.strip_prefix("variant=") {
+            variant = Some(variant_value.to_string());
+        } else {
+            flags.push(*part);
+        }
+    }
+
+    (language, flags, variant)
 }
 
 /// Extracts code blocks with propagation support.
@@ -233,6 +250,7 @@ int main() {
         assert_eq!(blocks[0].language, "c");
         assert!(!blocks[0].ignore);
         assert!(!blocks[0].propagate);
+        assert_eq!(blocks[0].variant, None);
         assert!(blocks[0].code.contains("int main()"));
     }
 
@@ -274,16 +292,29 @@ Point p;
 
     #[test]
     fn test_parse_fence_info() {
-        let (lang, flags) = parse_fence_info("c");
+        let (lang, flags, variant) = parse_fence_info("c");
         assert_eq!(lang, "c");
         assert!(flags.is_empty());
+        assert_eq!(variant, None);
 
-        let (lang, flags) = parse_fence_info("typescript,ignore");
+        let (lang, flags, variant) = parse_fence_info("typescript,ignore");
         assert_eq!(lang, "typescript");
         assert_eq!(flags, vec!["ignore"]);
+        assert_eq!(variant, None);
 
-        let (lang, flags) = parse_fence_info("parasol-c,propagate");
-        assert_eq!(lang, "parasol-c");
+        let (lang, flags, variant) = parse_fence_info("c,propagate");
+        assert_eq!(lang, "c");
         assert_eq!(flags, vec!["propagate"]);
+        assert_eq!(variant, None);
+
+        let (lang, flags, variant) = parse_fence_info("c,variant=parasol");
+        assert_eq!(lang, "c");
+        assert!(flags.is_empty());
+        assert_eq!(variant, Some("parasol".to_string()));
+
+        let (lang, flags, variant) = parse_fence_info("c,propagate,variant=parasol");
+        assert_eq!(lang, "c");
+        assert_eq!(flags, vec!["propagate"]);
+        assert_eq!(variant, Some("parasol".to_string()));
     }
 }

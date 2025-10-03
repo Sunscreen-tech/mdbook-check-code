@@ -8,26 +8,27 @@ title = "Test Book"
 [preprocessor.check-code]
 command = "../../target/release/mdbook-check-code"
 
-# Parasol C configuration
-[preprocessor.check-code.languages.parasol-c]
-enabled = true
-compiler = "${CLANG}"
-flags = ["-target", "parasol", "-fsyntax-only"]
-preamble = "#include <parasol.h>"
-fence_markers = ["parasol-c", "parasol"]
-
-# Plain C configuration
+# C configuration
 [preprocessor.check-code.languages.c]
 enabled = true
 compiler = "gcc"
 flags = ["-fsyntax-only"]
-fence_markers = ["c"]
+
+# Parasol variant - uses Sunscreen LLVM for FHE compilation
+[preprocessor.check-code.languages.c.variants.parasol]
+compiler = "${CLANG}"
+flags = ["-target", "parasol", "-fsyntax-only"]
+preamble = "#include <parasol.h>"
 
 # TypeScript configuration
 [preprocessor.check-code.languages.typescript]
 enabled = true
 compiler = "tsc"
 flags = ["--noEmit", "--skipLibCheck"]
-fence_markers = ["typescript", "ts"]
+
+# Solidity configuration
+[preprocessor.check-code.languages.solidity]
+enabled = true
+compiler = "solc"
 
 [output.html]

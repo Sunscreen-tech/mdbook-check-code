@@ -6,7 +6,7 @@ This file tests basic Parasol C code compilation.
 
 Here's a simple FHE program that adds two numbers:
 
-```parasol-c
+```c,variant=parasol
 [[clang::fhe_program]] uint8_t add(
     [[clang::encrypted]] uint8_t a,
     [[clang::encrypted]] uint8_t b
@@ -17,7 +17,7 @@ Here's a simple FHE program that adds two numbers:
 
 ## This should be ignored
 
-```parasol-c,ignore
+```c,variant=parasol,ignore
 This code should not be compiled because it has the ignore flag.
 This is not valid C code.
 ```

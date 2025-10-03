@@ -5,78 +5,297 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
-/// Trait for language-specific compilation and validation.
+/// Get default fence markers for a language based on highlight.js language definitions.
 ///
-/// This trait defines the interface for validating code blocks in different
-/// programming languages. Implementations must be thread-safe (`Send + Sync`)
-/// to support potential parallel compilation in the future.
+/// This function returns the canonical language name plus common aliases that highlight.js
+/// recognizes for syntax highlighting. If no built-in mapping exists, returns just the
+/// language name itself.
 ///
-/// # Example Implementation
+/// # Arguments
+///
+/// * `lang_name` - The language name from the configuration section (e.g., "c", "typescript")
+///
+/// # Returns
+///
+/// A vector of fence marker strings that should recognize this language in markdown.
+///
+/// # Examples
 ///
 /// ```ignore
-/// struct MyLanguage {
-///     name: String,
-///     fence_markers: Vec<String>,
-///     file_extension: String,
-/// }
-///
-/// impl Language for MyLanguage {
-///     fn name(&self) -> &str { &self.name }
-///     fn fence_markers(&self) -> &[String] { &self.fence_markers }
-///     fn file_extension(&self) -> &str { &self.file_extension }
-///     fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
-///         // Validation logic here
-///         Ok(())
-///     }
-/// }
+/// assert_eq!(get_default_fence_markers("c"), vec!["c", "h"]);
+/// assert_eq!(get_default_fence_markers("typescript"), vec!["typescript", "ts", "tsx", "mts", "cts"]);
+/// assert_eq!(get_default_fence_markers("unknown"), vec!["unknown"]);
 /// ```
-pub trait Language: Send + Sync {
-    /// Returns the name of this language (e.g., "parasol-c", "c", "typescript").
-    fn name(&self) -> &str;
+///
+/// # Reference
+///
+/// Language aliases are based on highlight.js SUPPORTED_LANGUAGES.md:
+/// https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md
+pub fn get_default_fence_markers(lang_name: &str) -> Vec<String> {
+    match lang_name {
+        // Numbers & Special
+        "1c" => vec!["1c"],
+        "4d" => vec!["4d"],
 
-    /// Returns the fence markers that identify this language in markdown.
-    ///
-    /// Multiple fence markers can map to the same language, e.g.,
-    /// `["typescript", "ts"]` for TypeScript.
-    fn fence_markers(&self) -> &[String];
+        // A
+        "abap" => vec!["sap-abap", "abap"],
+        "abc" => vec!["abc"],
+        "abnf" => vec!["abnf"],
+        "accesslog" => vec!["accesslog"],
+        "actionscript" => vec!["actionscript", "as"],
+        "ada" => vec!["ada"],
+        "aiken" => vec!["aiken", "ak"],
+        "alan" => vec!["alan", "i", "ln"],
+        "angelscript" => vec!["angelscript", "asc"],
+        "apache" => vec!["apache", "apacheconf"],
+        "apex" => vec!["apex"],
+        "applescript" => vec!["applescript", "osascript"],
+        "arcade" => vec!["arcade"],
+        "arduino" => vec!["arduino", "ino"],
+        "armasm" => vec!["armasm", "arm"],
+        "asciidoc" => vec!["asciidoc", "adoc"],
+        "aspectj" => vec!["aspectj"],
+        "autohotkey" => vec!["autohotkey"],
+        "autoit" => vec!["autoit"],
+        "avrasm" => vec!["avrasm"],
+        "awk" => vec!["awk", "mawk", "nawk", "gawk"],
 
-    /// Returns the file extension for this language (e.g., ".c", ".ts").
-    fn file_extension(&self) -> &str;
+        // B
+        "bash" => vec!["bash", "sh", "zsh"],
+        "basic" => vec!["basic"],
+        "bnf" => vec!["bnf"],
+        "brainfuck" => vec!["brainfuck", "bf"],
 
-    /// Compiles or validates the given code.
-    ///
-    /// # Arguments
-    ///
-    /// * `code` - The source code to validate (may include preambles)
-    /// * `temp_file` - Path where the code should be written for compilation
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(())` if compilation succeeds
-    /// * `Err` with compilation error details if it fails
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The temporary file cannot be created or written
-    /// - The compiler executable cannot be found or executed
-    /// - The code fails to compile
-    fn compile(&self, code: &str, temp_file: &Path) -> Result<()>;
+        // C
+        "c" => vec!["c", "h"],
+        "cal" => vec!["cal"],
+        "capnproto" => vec!["capnproto", "capnp"],
+        "ceylon" => vec!["ceylon"],
+        "clean" => vec!["clean", "icl", "dcl"],
+        "clojure" => vec!["clojure", "clj"],
+        "clojurerepl" => vec!["clojure-repl"],
+        "cmake" => vec!["cmake", "cmake.in"],
+        "coffeescript" => vec!["coffeescript", "coffee", "cson", "iced"],
+        "coq" => vec!["coq"],
+        "cos" => vec!["cos", "cls"],
+        "cpp" => vec!["cpp", "hpp", "cc", "hh", "c++", "h++", "cxx", "hxx"],
+        "crmsh" => vec!["crmsh", "crm", "pcmk"],
+        "crystal" => vec!["crystal", "cr"],
+        "csharp" => vec!["csharp", "cs"],
+        "csp" => vec!["csp"],
+        "css" => vec!["css"],
 
-    /// Extracts identifiers (function names, class names, etc.) from the code.
-    ///
-    /// Used for generating descriptive temporary file names. The default
-    /// implementation returns an empty vector.
-    fn extract_identifiers(&self, _code: &str) -> Vec<String> {
-        Vec::new()
+        // D
+        "d" => vec!["d"],
+        "dart" => vec!["dart"],
+        "delphi" => vec!["delphi", "dpr", "dfm", "pas", "pascal"],
+        "diff" => vec!["diff", "patch"],
+        "django" => vec!["django", "jinja"],
+        "dns" => vec!["dns", "zone", "bind"],
+        "dockerfile" => vec!["dockerfile", "docker"],
+        "dos" => vec!["dos", "bat", "cmd"],
+        "dsconfig" => vec!["dsconfig"],
+        "dts" => vec!["dts"],
+        "dust" => vec!["dust", "dst"],
+
+        // E
+        "ebnf" => vec!["ebnf"],
+        "elixir" => vec!["elixir"],
+        "elm" => vec!["elm"],
+        "erb" => vec!["erb"],
+        "erlang" => vec!["erlang", "erl"],
+        "erlang-repl" => vec!["erlang-repl"],
+        "excel" => vec!["excel", "xls", "xlsx"],
+
+        // F
+        "fix" => vec!["fix"],
+        "flix" => vec!["flix"],
+        "fortran" => vec!["fortran", "f90", "f95"],
+        "fsharp" => vec!["fsharp", "fs", "fsx", "fsi", "fsscript"],
+
+        // G
+        "gams" => vec!["gams", "gms"],
+        "gauss" => vec!["gauss", "gss"],
+        "gcode" => vec!["gcode", "nc"],
+        "gherkin" => vec!["gherkin"],
+        "glsl" => vec!["glsl"],
+        "gml" => vec!["gml"],
+        "go" => vec!["go", "golang"],
+        "golo" => vec!["golo", "gololang"],
+        "gradle" => vec!["gradle"],
+        "graphql" => vec!["graphql", "gql"],
+        "groovy" => vec!["groovy"],
+
+        // H
+        "haml" => vec!["haml"],
+        "handlebars" => vec!["handlebars", "hbs", "html.hbs", "html.handlebars"],
+        "haskell" => vec!["haskell", "hs"],
+        "haxe" => vec!["haxe", "hx"],
+        "hsp" => vec!["hsp"],
+        "html" => vec!["html", "xhtml"],
+        "http" => vec!["http", "https"],
+        "hy" => vec!["hy", "hylang"],
+
+        // I
+        "inform7" => vec!["inform7", "i7"],
+        "ini" => vec!["ini", "toml"],
+        "irpf90" => vec!["irpf90"],
+        "isbl" => vec!["isbl"],
+
+        // J
+        "java" => vec!["java", "jsp"],
+        "javascript" => vec!["javascript", "js", "jsx"],
+        "jbosscli" => vec!["jboss-cli", "wildfly-cli"],
+        "json" => vec!["json", "jsonc", "json5"],
+        "julia" => vec!["julia", "julia-repl"],
+
+        // K
+        "kotlin" => vec!["kotlin", "kt"],
+
+        // L
+        "lasso" => vec!["lasso", "ls", "lassoscript"],
+        "latex" => vec!["tex"],
+        "ldif" => vec!["ldif"],
+        "leaf" => vec!["leaf"],
+        "less" => vec!["less"],
+        "lisp" => vec!["lisp"],
+        "livecodeserver" => vec!["livecodeserver"],
+        "livescript" => vec!["livescript", "ls"],
+        "llvm" => vec!["llvm"],
+        "lsl" => vec!["lsl"],
+        "lua" => vec!["lua", "pluto"],
+
+        // M
+        "makefile" => vec!["makefile", "mk", "mak", "make"],
+        "markdown" => vec!["markdown", "md", "mkdown", "mkd"],
+        "mathematica" => vec!["mathematica", "mma", "wl"],
+        "matlab" => vec!["matlab"],
+        "maxima" => vec!["maxima"],
+        "mel" => vec!["mel"],
+        "mercury" => vec!["mercury"],
+        "mipsasm" => vec!["mipsasm", "mips"],
+        "mizar" => vec!["mizar"],
+        "mojolicious" => vec!["mojolicious"],
+        "monkey" => vec!["monkey"],
+        "moonscript" => vec!["moonscript", "moon"],
+
+        // N
+        "n1ql" => vec!["n1ql"],
+        "nestedtext" => vec!["nestedtext", "nt"],
+        "nginx" => vec!["nginx", "nginxconf"],
+        "nim" => vec!["nim", "nimrod"],
+        "nix" => vec!["nix"],
+        "node-repl" => vec!["node-repl"],
+        "nsis" => vec!["nsis"],
+
+        // O
+        "objectivec" => vec!["objectivec", "mm", "objc", "obj-c"],
+        "ocaml" => vec!["ocaml", "ml"],
+        "openscad" => vec!["openscad", "scad"],
+        "oxygene" => vec!["oxygene"],
+
+        // P
+        "parser3" => vec!["parser3"],
+        "perl" => vec!["perl", "pl", "pm"],
+        "pf" => vec!["pf", "pf.conf"],
+        "pgsql" => vec!["pgsql", "postgres", "postgresql"],
+        "php" => vec!["php"],
+        "phptemplate" => vec!["php-template"],
+        "plaintext" => vec!["plaintext", "txt", "text"],
+        "pony" => vec!["pony"],
+        "powershell" => vec!["powershell", "ps", "ps1"],
+        "processing" => vec!["processing"],
+        "profile" => vec!["profile"],
+        "prolog" => vec!["prolog"],
+        "properties" => vec!["properties"],
+        "protobuf" => vec!["protobuf"],
+        "puppet" => vec!["puppet", "pp"],
+        "purebasic" => vec!["purebasic", "pb", "pbi"],
+        "python" => vec!["python", "py", "gyp"],
+        "pythonrepl" => vec!["python-repl", "pycon"],
+
+        // Q
+        "q" => vec!["k", "kdb"],
+        "qml" => vec!["qml"],
+
+        // R
+        "r" => vec!["r"],
+        "reasonml" => vec!["reasonml", "re"],
+        "rib" => vec!["rib"],
+        "roboconf" => vec!["graph", "instances"],
+        "routeros" => vec!["routeros", "mikrotik"],
+        "rsl" => vec!["rsl"],
+        "ruby" => vec!["ruby", "rb", "gemspec", "podspec", "thor", "irb"],
+        "ruleslanguage" => vec!["ruleslanguage"],
+        "rust" => vec!["rust", "rs"],
+
+        // S
+        "sas" => vec!["sas"],
+        "scala" => vec!["scala"],
+        "scheme" => vec!["scheme"],
+        "scilab" => vec!["scilab", "sci"],
+        "scss" => vec!["scss"],
+        "shell" => vec!["shell", "console"],
+        "smali" => vec!["smali"],
+        "smalltalk" => vec!["smalltalk", "st"],
+        "sml" => vec!["sml", "ml"],
+        "solidity" => vec!["solidity", "sol"],
+        "sqf" => vec!["sqf"],
+        "sql" => vec!["sql"],
+        "stan" => vec!["stan", "stanfuncs"],
+        "stata" => vec!["stata"],
+        "step21" => vec!["step21", "p21", "step", "stp"],
+        "stylus" => vec!["stylus", "styl"],
+        "subunit" => vec!["subunit"],
+        "swift" => vec!["swift"],
+
+        // T
+        "taggerscript" => vec!["taggerscript"],
+        "tap" => vec!["tap"],
+        "tcl" => vec!["tcl", "tk"],
+        "thrift" => vec!["thrift"],
+        "toml" => vec!["toml"],
+        "tp" => vec!["tp"],
+        "twig" => vec!["twig", "craftcms"],
+        "typescript" => vec!["typescript", "ts", "tsx", "mts", "cts"],
+
+        // V
+        "vala" => vec!["vala"],
+        "vbnet" => vec!["vbnet", "vb"],
+        "vbscript" => vec!["vbscript", "vbs"],
+        "vbscripthtmlvbscript" => vec!["vbscript-html"],
+        "verilog" => vec!["verilog", "v"],
+        "vhdl" => vec!["vhdl"],
+        "vim" => vec!["vim"],
+        "wasm" => vec!["wasm"],
+        "wren" => vec!["wren"],
+
+        // X
+        "x86asm" => vec!["x86asm"],
+        "xl" => vec!["xl", "tao"],
+        "xml" => vec!["xml", "rss", "atom", "xjb", "xsd", "xsl", "plist", "svg"],
+        "xquery" => vec!["xquery", "xpath", "xq"],
+
+        // Y
+        "yaml" => vec!["yaml", "yml"],
+
+        // Z
+        "zephir" => vec!["zephir", "zep"],
+        "zig" => vec!["zig"],
+
+        // Default: use the language name itself
+        _ => vec![lang_name],
     }
+    .iter()
+    .map(|s| s.to_string())
+    .collect()
 }
 
 /// A language implementation configured from `book.toml`.
 ///
 /// This struct represents a language whose behavior is entirely determined by
-/// configuration rather than hardcoded logic. It implements the `Language` trait
-/// using the compiler path, flags, and preamble specified in the configuration.
+/// configuration rather than hardcoded logic, using the compiler path, flags,
+/// and preamble specified in the configuration.
 ///
 /// # Configuration-Driven Design
 ///
@@ -101,6 +320,16 @@ impl ConfiguredLanguage {
         }
     }
 
+    /// Returns the name of this language (e.g., "c", "c-parasol", "typescript").
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the file extension for this language (e.g., ".c", ".ts").
+    pub fn file_extension(&self) -> &str {
+        &self.file_extension
+    }
+
     /// Determine file extension from fence markers (first marker + common extensions)
     fn determine_file_extension(fence_markers: &[String]) -> String {
         if let Some(first_marker) = fence_markers.first() {
@@ -119,22 +348,26 @@ impl ConfiguredLanguage {
             ".txt".to_string()
         }
     }
-}
 
-impl Language for ConfiguredLanguage {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn fence_markers(&self) -> &[String] {
-        &self.config.fence_markers
-    }
-
-    fn file_extension(&self) -> &str {
-        &self.file_extension
-    }
-
-    fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
+    /// Compiles or validates the given code.
+    ///
+    /// # Arguments
+    ///
+    /// * `code` - The source code to validate (may include preambles)
+    /// * `temp_file` - Path where the code should be written for compilation
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if compilation succeeds
+    /// * `Err` with compilation error details if it fails
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The temporary file cannot be created or written
+    /// - The compiler executable cannot be found or executed
+    /// - The code fails to compile
+    pub fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
         // Write code with optional preamble to temp file
         let mut file = File::create(temp_file).context("Failed to create temporary file")?;
 
@@ -171,11 +404,6 @@ impl Language for ConfiguredLanguage {
 
         Ok(())
     }
-
-    fn extract_identifiers(&self, _code: &str) -> Vec<String> {
-        // No identifier extraction - return empty vec
-        Vec::new()
-    }
 }
 
 /// Registry of available languages for code validation.
@@ -190,57 +418,105 @@ impl Language for ConfiguredLanguage {
 /// let registry = LanguageRegistry::from_config(&config);
 ///
 /// // Find a language by fence marker
-/// if let Some(lang) = registry.find_by_fence("c") {
+/// if let Some(lang) = registry.find_by_fence("c", None) {
 ///     lang.compile(code, &temp_file)?;
 /// }
 /// ```
 pub struct LanguageRegistry {
-    languages: Vec<Box<dyn Language>>,
+    config: CheckCodeConfig,
 }
 
 impl LanguageRegistry {
     /// Creates a new language registry from configuration.
     ///
-    /// Only enabled languages are included in the registry. Each language
-    /// is instantiated as a `ConfiguredLanguage` based on its settings
-    /// in `book.toml`.
+    /// The registry stores the configuration and creates language instances
+    /// on demand when `find_by_fence` is called.
     pub fn from_config(config: &CheckCodeConfig) -> Self {
-        let mut languages: Vec<Box<dyn Language>> = Vec::new();
-
-        for (name, lang_config) in config.languages() {
-            if lang_config.enabled {
-                languages.push(Box::new(ConfiguredLanguage::new(
-                    name.clone(),
-                    lang_config.clone(),
-                )));
-            }
+        Self {
+            config: config.clone(),
         }
-
-        Self { languages }
     }
 
-    /// Finds a language by its fence marker.
+    /// Finds a language by its fence marker and optional variant.
     ///
     /// # Arguments
     ///
     /// * `fence` - The fence marker from a markdown code block (e.g., "c", "ts")
+    /// * `variant` - Optional variant name (e.g., Some("parasol") for C with Parasol compiler)
     ///
     /// # Returns
     ///
-    /// * `Some(&dyn Language)` if a language with this fence marker exists
+    /// * `Some(Box<dyn Language>)` if a language with this fence marker exists
     /// * `None` if no language is configured for this fence marker
+    ///
+    /// # Variant Handling
+    ///
+    /// When a variant is specified, the variant's configuration (compiler, flags, preamble)
+    /// overrides the base language configuration. The variant inherits fence_markers and
+    /// file_extension from the base language.
     ///
     /// # Example
     ///
     /// ```ignore
-    /// if let Some(lang) = registry.find_by_fence("parasol-c") {
+    /// // Base C language
+    /// if let Some(lang) = registry.find_by_fence("c", None) {
+    ///     println!("Found language: {}", lang.name());
+    /// }
+    ///
+    /// // Parasol variant of C
+    /// if let Some(lang) = registry.find_by_fence("c", Some("parasol")) {
     ///     println!("Found language: {}", lang.name());
     /// }
     /// ```
-    pub fn find_by_fence(&self, fence: &str) -> Option<&dyn Language> {
-        self.languages
-            .iter()
-            .find(|lang| lang.fence_markers().contains(&fence.to_string()))
-            .map(|boxed| boxed.as_ref())
+    pub fn find_by_fence(&self, fence: &str, variant: Option<&str>) -> Option<ConfiguredLanguage> {
+        // Find the base language config by fence marker (using resolved fence markers)
+        let (lang_name, base_config) = self.config.languages().iter().find(|(name, config)| {
+            if !config.enabled {
+                return false;
+            }
+            let fence_markers = config.get_fence_markers(name);
+            fence_markers.contains(&fence.to_string())
+        })?;
+
+        // If no variant is specified, create base language with resolved fence markers
+        let variant_name = match variant {
+            None => {
+                // Get resolved fence markers for the base language
+                let resolved_fence_markers = base_config.get_fence_markers(lang_name);
+
+                // Create config with resolved fence markers
+                let resolved_config = crate::config::LanguageConfig {
+                    enabled: base_config.enabled,
+                    compiler: base_config.compiler.clone(),
+                    flags: base_config.flags.clone(),
+                    preamble: base_config.preamble.clone(),
+                    fence_markers: resolved_fence_markers,
+                    variants: base_config.variants.clone(),
+                };
+
+                return Some(ConfiguredLanguage::new(lang_name.clone(), resolved_config));
+            }
+            Some(v) => v,
+        };
+
+        // Look up the variant config
+        let variant_config = base_config.variants.get(variant_name)?;
+
+        // Get resolved fence markers from base config
+        let resolved_fence_markers = base_config.get_fence_markers(lang_name);
+
+        // Create merged config: variant settings override base settings
+        let merged_config = crate::config::LanguageConfig {
+            enabled: base_config.enabled,
+            compiler: variant_config.compiler.clone(),
+            flags: variant_config.flags.clone(),
+            preamble: variant_config.preamble.clone(),
+            fence_markers: resolved_fence_markers,
+            variants: std::collections::HashMap::new(), // Variants don't inherit variants
+        };
+
+        // Create a new language with variant-specific name
+        let variant_lang_name = format!("{}-{}", lang_name, variant_name);
+        Some(ConfiguredLanguage::new(variant_lang_name, merged_config))
     }
 }
