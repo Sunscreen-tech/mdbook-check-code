@@ -134,6 +134,10 @@
               nodePackages.typescript
             ];
           } ''
+            echo "Current working directory is: $(pwd)"
+            echo "TMPDIR is: $TMPDIR"
+            echo "NIX_BUILD_TOP is: $NIX_BUILD_TOP"
+
             cp -r ${src}/tests/fixtures/ $TMPDIR/
             cd $TMPDIR/fixtures
 
@@ -145,10 +149,12 @@
             #command = "../../target/release/mdbook-check-code"
             # to be the build output of this flake in the book.toml
             # Without backup
-            sed -i "s|../../target/release/mdbook-check-code|${mdbook-check-code}/bin/mdbook-check-code|g" book.toml
+            sed "s|../../target/release/mdbook-check-code|${mdbook-check-code}/bin/mdbook-check-code|g" book.toml > book.toml.tmp
+            mv book.toml.tmp book.toml
             cat book.toml
+            ls
 
-            mdbook build
+            mdbook build -d $TMPDIR
 
             touch $out
           '';
