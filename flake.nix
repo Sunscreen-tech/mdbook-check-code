@@ -97,7 +97,7 @@
 
       in {
         packages = {
-          inherit mdbook-check-code sunscreen-llvm;
+          inherit mdbook-check-code;
           default = mdbook-check-code;
         };
 
