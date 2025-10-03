@@ -33,73 +33,255 @@ use std::process::Command;
 /// https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md
 pub fn get_default_fence_markers(lang_name: &str) -> Vec<String> {
     match lang_name {
-        // System & Shell
+        // Numbers & Special
+        "1c" => vec!["1c"],
+        "4d" => vec!["4d"],
+
+        // A
+        "abap" => vec!["sap-abap", "abap"],
+        "abc" => vec!["abc"],
+        "abnf" => vec!["abnf"],
+        "accesslog" => vec!["accesslog"],
+        "actionscript" => vec!["actionscript", "as"],
+        "ada" => vec!["ada"],
+        "aiken" => vec!["aiken", "ak"],
+        "alan" => vec!["alan", "i", "ln"],
+        "angelscript" => vec!["angelscript", "asc"],
+        "apache" => vec!["apache", "apacheconf"],
+        "apex" => vec!["apex"],
+        "applescript" => vec!["applescript", "osascript"],
+        "arcade" => vec!["arcade"],
+        "arduino" => vec!["arduino", "ino"],
+        "armasm" => vec!["armasm", "arm"],
+        "asciidoc" => vec!["asciidoc", "adoc"],
+        "aspectj" => vec!["aspectj"],
+        "autohotkey" => vec!["autohotkey"],
+        "autoit" => vec!["autoit"],
+        "avrasm" => vec!["avrasm"],
+        "awk" => vec!["awk", "mawk", "nawk", "gawk"],
+
+        // B
         "bash" => vec!["bash", "sh", "zsh"],
-        "powershell" => vec!["powershell", "ps", "ps1"],
-        "shell" => vec!["shell", "console"],
+        "basic" => vec!["basic"],
+        "bnf" => vec!["bnf"],
+        "brainfuck" => vec!["brainfuck", "bf"],
 
-        // C family
+        // C
         "c" => vec!["c", "h"],
+        "cal" => vec!["cal"],
+        "capnproto" => vec!["capnproto", "capnp"],
+        "ceylon" => vec!["ceylon"],
+        "clean" => vec!["clean", "icl", "dcl"],
+        "clojure" => vec!["clojure", "clj"],
+        "clojurerepl" => vec!["clojure-repl"],
+        "cmake" => vec!["cmake", "cmake.in"],
+        "coffeescript" => vec!["coffeescript", "coffee", "cson", "iced"],
+        "coq" => vec!["coq"],
+        "cos" => vec!["cos", "cls"],
         "cpp" => vec!["cpp", "hpp", "cc", "hh", "c++", "h++", "cxx", "hxx"],
+        "crmsh" => vec!["crmsh", "crm", "pcmk"],
+        "crystal" => vec!["crystal", "cr"],
         "csharp" => vec!["csharp", "cs"],
-        "objectivec" => vec!["objectivec", "mm", "objc", "obj-c"],
-
-        // JVM languages
-        "java" => vec!["java", "jsp"],
-        "kotlin" => vec!["kotlin", "kt"],
-        "scala" => vec!["scala"],
-
-        // Web languages
-        "javascript" => vec!["javascript", "js", "jsx"],
-        "typescript" => vec!["typescript", "ts", "tsx", "mts", "cts"],
-        "html" => vec!["html", "xhtml"],
-        "xml" => vec!["xml", "rss", "atom", "xsd", "xsl", "plist", "svg"],
+        "csp" => vec!["csp"],
         "css" => vec!["css"],
-        "json" => vec!["json", "jsonc", "json5"],
-        "php" => vec!["php"],
 
-        // Functional languages
-        "rust" => vec!["rust", "rs"],
-        "go" => vec!["go", "golang"],
-        "haskell" => vec!["haskell", "hs"],
-        "ocaml" => vec!["ocaml", "ml"],
-        "erlang" => vec!["erlang", "erl"],
-        "elixir" => vec!["elixir"],
-        "fsharp" => vec!["fsharp", "fs", "fsx", "fsi", "fsscript"],
-        "elm" => vec!["elm"],
-
-        // Scripting languages
-        "python" => vec!["python", "py", "gyp"],
-        "ruby" => vec!["ruby", "rb", "gemspec", "podspec", "thor", "irb"],
-        "perl" => vec!["perl", "pl", "pm"],
-        "lua" => vec!["lua", "pluto"],
-        "r" => vec!["r"],
-
-        // Mobile
+        // D
+        "d" => vec!["d"],
         "dart" => vec!["dart"],
+        "delphi" => vec!["delphi", "dpr", "dfm", "pas", "pascal"],
+        "diff" => vec!["diff", "patch"],
+        "django" => vec!["django", "jinja"],
+        "dns" => vec!["dns", "zone", "bind"],
+        "dockerfile" => vec!["dockerfile", "docker"],
+        "dos" => vec!["dos", "bat", "cmd"],
+        "dsconfig" => vec!["dsconfig"],
+        "dts" => vec!["dts"],
+        "dust" => vec!["dust", "dst"],
+
+        // E
+        "ebnf" => vec!["ebnf"],
+        "elixir" => vec!["elixir"],
+        "elm" => vec!["elm"],
+        "erb" => vec!["erb"],
+        "erlang" => vec!["erlang", "erl"],
+        "erlang-repl" => vec!["erlang-repl"],
+        "excel" => vec!["excel", "xls", "xlsx"],
+
+        // F
+        "fix" => vec!["fix"],
+        "flix" => vec!["flix"],
+        "fortran" => vec!["fortran", "f90", "f95"],
+        "fsharp" => vec!["fsharp", "fs", "fsx", "fsi", "fsscript"],
+
+        // G
+        "gams" => vec!["gams", "gms"],
+        "gauss" => vec!["gauss", "gss"],
+        "gcode" => vec!["gcode", "nc"],
+        "gherkin" => vec!["gherkin"],
+        "glsl" => vec!["glsl"],
+        "gml" => vec!["gml"],
+        "go" => vec!["go", "golang"],
+        "golo" => vec!["golo", "gololang"],
+        "gradle" => vec!["gradle"],
+        "graphql" => vec!["graphql", "gql"],
+        "groovy" => vec!["groovy"],
+
+        // H
+        "haml" => vec!["haml"],
+        "handlebars" => vec!["handlebars", "hbs", "html.hbs", "html.handlebars"],
+        "haskell" => vec!["haskell", "hs"],
+        "haxe" => vec!["haxe", "hx"],
+        "hsp" => vec!["hsp"],
+        "html" => vec!["html", "xhtml"],
+        "http" => vec!["http", "https"],
+        "hy" => vec!["hy", "hylang"],
+
+        // I
+        "inform7" => vec!["inform7", "i7"],
+        "ini" => vec!["ini", "toml"],
+        "irpf90" => vec!["irpf90"],
+        "isbl" => vec!["isbl"],
+
+        // J
+        "java" => vec!["java", "jsp"],
+        "javascript" => vec!["javascript", "js", "jsx"],
+        "jbosscli" => vec!["jboss-cli", "wildfly-cli"],
+        "json" => vec!["json", "jsonc", "json5"],
+        "julia" => vec!["julia", "julia-repl"],
+
+        // K
+        "kotlin" => vec!["kotlin", "kt"],
+
+        // L
+        "lasso" => vec!["lasso", "ls", "lassoscript"],
+        "latex" => vec!["tex"],
+        "ldif" => vec!["ldif"],
+        "leaf" => vec!["leaf"],
+        "less" => vec!["less"],
+        "lisp" => vec!["lisp"],
+        "livecodeserver" => vec!["livecodeserver"],
+        "livescript" => vec!["livescript", "ls"],
+        "llvm" => vec!["llvm"],
+        "lsl" => vec!["lsl"],
+        "lua" => vec!["lua", "pluto"],
+
+        // M
+        "makefile" => vec!["makefile", "mk", "mak", "make"],
+        "markdown" => vec!["markdown", "md", "mkdown", "mkd"],
+        "mathematica" => vec!["mathematica", "mma", "wl"],
+        "matlab" => vec!["matlab"],
+        "maxima" => vec!["maxima"],
+        "mel" => vec!["mel"],
+        "mercury" => vec!["mercury"],
+        "mipsasm" => vec!["mipsasm", "mips"],
+        "mizar" => vec!["mizar"],
+        "mojolicious" => vec!["mojolicious"],
+        "monkey" => vec!["monkey"],
+        "moonscript" => vec!["moonscript", "moon"],
+
+        // N
+        "n1ql" => vec!["n1ql"],
+        "nestedtext" => vec!["nestedtext", "nt"],
+        "nginx" => vec!["nginx", "nginxconf"],
+        "nim" => vec!["nim", "nimrod"],
+        "nix" => vec!["nix"],
+        "node-repl" => vec!["node-repl"],
+        "nsis" => vec!["nsis"],
+
+        // O
+        "objectivec" => vec!["objectivec", "mm", "objc", "obj-c"],
+        "ocaml" => vec!["ocaml", "ml"],
+        "openscad" => vec!["openscad", "scad"],
+        "oxygene" => vec!["oxygene"],
+
+        // P
+        "parser3" => vec!["parser3"],
+        "perl" => vec!["perl", "pl", "pm"],
+        "pf" => vec!["pf", "pf.conf"],
+        "pgsql" => vec!["pgsql", "postgres", "postgresql"],
+        "php" => vec!["php"],
+        "phptemplate" => vec!["php-template"],
+        "plaintext" => vec!["plaintext", "txt", "text"],
+        "pony" => vec!["pony"],
+        "powershell" => vec!["powershell", "ps", "ps1"],
+        "processing" => vec!["processing"],
+        "profile" => vec!["profile"],
+        "prolog" => vec!["prolog"],
+        "properties" => vec!["properties"],
+        "protobuf" => vec!["protobuf"],
+        "puppet" => vec!["puppet", "pp"],
+        "purebasic" => vec!["purebasic", "pb", "pbi"],
+        "python" => vec!["python", "py", "gyp"],
+        "pythonrepl" => vec!["python-repl", "pycon"],
+
+        // Q
+        "q" => vec!["k", "kdb"],
+        "qml" => vec!["qml"],
+
+        // R
+        "r" => vec!["r"],
+        "reasonml" => vec!["reasonml", "re"],
+        "rib" => vec!["rib"],
+        "roboconf" => vec!["graph", "instances"],
+        "routeros" => vec!["routeros", "mikrotik"],
+        "rsl" => vec!["rsl"],
+        "ruby" => vec!["ruby", "rb", "gemspec", "podspec", "thor", "irb"],
+        "ruleslanguage" => vec!["ruleslanguage"],
+        "rust" => vec!["rust", "rs"],
+
+        // S
+        "sas" => vec!["sas"],
+        "scala" => vec!["scala"],
+        "scheme" => vec!["scheme"],
+        "scilab" => vec!["scilab", "sci"],
+        "scss" => vec!["scss"],
+        "shell" => vec!["shell", "console"],
+        "smali" => vec!["smali"],
+        "smalltalk" => vec!["smalltalk", "st"],
+        "sml" => vec!["sml", "ml"],
+        "solidity" => vec!["solidity", "sol"],
+        "sqf" => vec!["sqf"],
+        "sql" => vec!["sql"],
+        "stan" => vec!["stan", "stanfuncs"],
+        "stata" => vec!["stata"],
+        "step21" => vec!["step21", "p21", "step", "stp"],
+        "stylus" => vec!["stylus", "styl"],
+        "subunit" => vec!["subunit"],
         "swift" => vec!["swift"],
 
-        // Data & Config
-        "yaml" => vec!["yaml", "yml"],
+        // T
+        "taggerscript" => vec!["taggerscript"],
+        "tap" => vec!["tap"],
+        "tcl" => vec!["tcl", "tk"],
+        "thrift" => vec!["thrift"],
         "toml" => vec!["toml"],
-        "sql" => vec!["sql"],
-        "graphql" => vec!["graphql", "gql"],
+        "tp" => vec!["tp"],
+        "twig" => vec!["twig", "craftcms"],
+        "typescript" => vec!["typescript", "ts", "tsx", "mts", "cts"],
 
-        // Build & DevOps
-        "dockerfile" => vec!["dockerfile", "docker"],
-        "makefile" => vec!["makefile", "mk", "mak", "make"],
-        "nix" => vec!["nix"],
+        // V
+        "vala" => vec!["vala"],
+        "vbnet" => vec!["vbnet", "vb"],
+        "vbscript" => vec!["vbscript", "vbs"],
+        "vbscripthtmlvbscript" => vec!["vbscript-html"],
+        "verilog" => vec!["verilog", "v"],
+        "vhdl" => vec!["vhdl"],
+        "vim" => vec!["vim"],
+        "wasm" => vec!["wasm"],
+        "wren" => vec!["wren"],
 
-        // Documentation
-        "markdown" => vec!["markdown", "md", "mkdown", "mkd"],
-        "latex" => vec!["tex"],
+        // X
+        "x86asm" => vec!["x86asm"],
+        "xl" => vec!["xl", "tao"],
+        "xml" => vec!["xml", "rss", "atom", "xjb", "xsd", "xsl", "plist", "svg"],
+        "xquery" => vec!["xquery", "xpath", "xq"],
 
-        // Blockchain
-        "solidity" => vec!["solidity", "sol"],
+        // Y
+        "yaml" => vec!["yaml", "yml"],
 
-        // Other
+        // Z
+        "zephir" => vec!["zephir", "zep"],
         "zig" => vec!["zig"],
-        "matlab" => vec!["matlab"],
 
         // Default: use the language name itself
         _ => vec![lang_name],
