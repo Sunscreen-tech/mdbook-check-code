@@ -26,7 +26,7 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Build package
-        run: nix build
+        run: nix build -L .#checks.x86_64-linux.mdbook-check-code
 
   clippy:
     name: Clippy
@@ -44,7 +44,7 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Run clippy
-        run: nix build .#checks.x86_64-linux.mdbook-check-code-clippy
+        run: nix build -L .#checks.x86_64-linux.mdbook-check-code-clippy
 
   formatting:
     name: Formatting
@@ -62,7 +62,7 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Check formatting
-        run: nix build .#checks.x86_64-linux.mdbook-check-code-fmt
+        run: nix build -L .#checks.x86_64-linux.mdbook-check-code-fmt
 
   integration-tests:
     name: Integration Tests
@@ -80,7 +80,7 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Run integration tests
-        run: nix build .#checks.x86_64-linux.runE2ETests
+        run: nix build -L .#checks.x86_64-linux.runE2ETests
 
   #build:
   #  name: Build ${{ matrix.system }}
