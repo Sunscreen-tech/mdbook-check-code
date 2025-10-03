@@ -74,37 +74,24 @@
           };
         };
 
-        # Your Rust project, built using crane
         src = craneLib.cleanCargoSource (craneLib.path ./.);
         commonArgs = {
           inherit src;
-          pname = "mdbook-check-code";
-          version = "0.1.0";
+          strictDeps = true;
         };
-        # This derivation builds the sources, but doesn't run checks.
-        mdbook-check-code = craneLib.buildPackage commonArgs;
 
-        # # Build the mdbook-check-code preprocessor
-        # mdbook-check-code = pkgs.rustPlatform.buildRustPackage {
-        #   pname = "mdbook-check-code";
-        #   version = "0.1.0";
-        #   src = gitignoreSource ./.;
+        # Build *just* the cargo dependencies, so we can reuse
+        # all of that work (e.g. via cachix) when running in CI
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-        #   cargoLock = { lockFile = ./Cargo.lock; };
+        # Build the actual crate itself, reusing the dependency
+        # artifacts from above.
+        mdbook-check-code =
+          craneLib.buildPackage (commonArgs // { inherit cargoArtifacts; });
 
-        #   nativeBuildInputs = [ pkgs.pkg-config ];
-
-        #   meta = with pkgs.lib; {
-        #     description =
-        #       "mdBook preprocessor for checking code blocks in multiple languages";
-        #     homepage = "https://github.com/Sunscreen-tech/mdbook-check-code";
-        #     license = licenses.agpl3Only;
-        #     mainProgram = "mdbook-check-code";
-        #   };
-        # };
       in {
         packages = {
-          inherit mdbook-check-code sunscreen-llvm;
+          inherit mdbook-check-code;
           default = mdbook-check-code;
         };
 
@@ -114,23 +101,54 @@
         };
 
         checks = {
-          fmt = craneLib.cargoFmt { inherit commonArgs; };
+          inherit mdbook-check-code;
 
-          clippy = craneLib.cargoClippy {
-            inherit commonArgs;
-            args = "--all-targets --all-features";
-          };
+          # Note that this is done as a separate derivation so that
+          # we can block the CI if there are issues here, but not
+          # prevent downstream consumers from building our crate by itself.
+          mdbook-check-code-clippy = craneLib.cargoClippy (commonArgs // {
+            inherit cargoArtifacts;
+            cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+          });
+
+          # Check formatting
+          mdbook-check-code-fmt = craneLib.cargoFmt { inherit src; };
+
+          # The script inlined for brevity, consider extracting it
+          # so that it becomes independent of nix
+          runE2ETests = pkgs.runCommand "e2e-tests" {
+            nativeBuildInputs = with pkgs; [
+              # FHE compiler
+              sunscreen-llvm
+
+              # mdbook tools
+              mdbook
+
+              # TypeScript support
+              nodejs
+              nodePackages.typescript
+            ];
+          } ''
+            mkdir -p $out
+            cp -r ${src}/tests/fixtures/ $out/
+            cd $out/fixtures
+            ls
+            echo "printing out src"
+            ls src
+
+            export CLANG="${sunscreen-llvm}/bin/clang"
+            export PATH="$PATH:${mdbook-check-code}/bin"
+            export RUST_LOG=info
+
+            mdbook build
+
+            touch $out
+          '';
         };
 
         devShells.default = with pkgs;
-          mkShellNoCC {
+          craneLib.devShell {
             nativeBuildInputs = [
-              # Rust toolchain
-              cargo
-              rustc
-              rustfmt
-              clippy
-
               # FHE compiler
               sunscreen-llvm
 
