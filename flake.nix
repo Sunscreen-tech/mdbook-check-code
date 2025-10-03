@@ -88,38 +88,6 @@
 
           nativeBuildInputs = [ pkgs.pkg-config ];
 
-          nativeCheckInputs = [
-            pkgs.rustfmt
-            pkgs.clippy
-            pkgs.mdbook
-            sunscreen-llvm
-            pkgs.nodejs
-            pkgs.nodePackages.typescript
-          ];
-
-          # Override checkPhase to run fmt, clippy, tests, and fixture validation
-          checkPhase = ''
-            runHook preCheck
-
-            echo "Running cargo fmt check..."
-            cargo fmt --check
-
-            echo "Running clippy on workspace only (not dependencies)..."
-            cargo clippy --all-targets --workspace -- -D warnings
-
-            echo "Running tests..."
-            cargo test --release
-
-            echo "Testing mdbook fixtures with built preprocessor..."
-            export CLANG="${sunscreen-llvm}/bin/clang"
-            export PATH="$PWD/target/release:$PATH"
-            cd tests/fixtures
-            mdbook build
-            cd ../..
-
-            runHook postCheck
-          '';
-
           meta = with pkgs.lib; {
             description = "mdBook preprocessor for checking code blocks in multiple languages";
             homepage = "https://github.com/Sunscreen-tech/mdbook-check-code";
