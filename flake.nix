@@ -79,7 +79,8 @@
           };
         };
 
-        src = gitignoreSource ./.; # The original source
+        fixture-src = gitignoreSource ./tests/fixtures;
+        src = craneLib.cleanCargoSource ./.;
         commonArgs = {
           inherit src;
           strictDeps = true;
@@ -123,40 +124,35 @@
           # so that it becomes independent of nix
           runE2ETests = pkgs.runCommand "e2e-tests" {
             nativeBuildInputs = with pkgs; [
-              # FHE compiler
-              sunscreen-llvm
-
-              # mdbook tools
               mdbook
 
-              # TypeScript support
+              # C compilers
+              sunscreen-llvm
+              gcc
+
+              # TypeScript compiler
               nodejs
               nodePackages.typescript
             ];
           } ''
-            echo "Current working directory is: $(pwd)"
-            echo "TMPDIR is: $TMPDIR"
-            echo "NIX_BUILD_TOP is: $NIX_BUILD_TOP"
+            cp -r ${fixture-src}/* $TMPDIR/
 
-            cp -r ${src}/tests/fixtures/ $TMPDIR/
-            cd $TMPDIR/fixtures
+            # Make everything in this directory writable, otherwise all the
+            # commands below will fail.
+            chmod -R u+w .
 
             export CLANG="${sunscreen-llvm}/bin/clang"
             export RUST_LOG=info
 
-            # Replace location for the
-            # [preprocessor.check-code]
-            #command = "../../target/release/mdbook-check-code"
-            # to be the build output of this flake in the book.toml
-            # Without backup
-            sed "s|../../target/release/mdbook-check-code|${mdbook-check-code}/bin/mdbook-check-code|g" book.toml > book.toml.tmp
-            mv book.toml.tmp book.toml
-            cat book.toml
-            ls
+            # Replace the mdbook-check-code path in book.toml
+            # to point to the built binary in this derivation.
+            sed -i "s|../../target/release/mdbook-check-code|${mdbook-check-code}/bin/mdbook-check-code|g" book.toml
 
-            mdbook build -d $TMPDIR
+            mdbook build
 
-            touch $out
+            # After the build is successful, copy the final output to the expected $out path.
+            mkdir $out
+            cp -r $TMPDIR/tests/fixtures/book/* $out
           '';
         };
 
