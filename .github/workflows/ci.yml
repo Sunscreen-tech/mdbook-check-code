@@ -26,7 +26,7 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Build package
-        run: nix build .#checks.x86_64-linux.mdbook-check-code
+        run: nix build
 
   clippy:
     name: Clippy

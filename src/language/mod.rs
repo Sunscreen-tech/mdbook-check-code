@@ -33,17 +33,74 @@ use std::process::Command;
 /// https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md
 pub fn get_default_fence_markers(lang_name: &str) -> Vec<String> {
     match lang_name {
+        // System & Shell
+        "bash" => vec!["bash", "sh", "zsh"],
+        "powershell" => vec!["powershell", "ps", "ps1"],
+        "shell" => vec!["shell", "console"],
+
+        // C family
         "c" => vec!["c", "h"],
         "cpp" => vec!["cpp", "hpp", "cc", "hh", "c++", "h++", "cxx", "hxx"],
-        "typescript" => vec!["typescript", "ts", "tsx", "mts", "cts"],
-        "rust" => vec!["rust", "rs"],
-        "python" => vec!["python", "py", "gyp"],
-        "javascript" => vec!["javascript", "js", "jsx"],
-        "solidity" => vec!["solidity", "sol"],
-        "go" => vec!["go", "golang"],
+        "csharp" => vec!["csharp", "cs"],
+        "objectivec" => vec!["objectivec", "mm", "objc", "obj-c"],
+
+        // JVM languages
         "java" => vec!["java", "jsp"],
         "kotlin" => vec!["kotlin", "kt"],
+        "scala" => vec!["scala"],
+
+        // Web languages
+        "javascript" => vec!["javascript", "js", "jsx"],
+        "typescript" => vec!["typescript", "ts", "tsx", "mts", "cts"],
+        "html" => vec!["html", "xhtml"],
+        "xml" => vec!["xml", "rss", "atom", "xsd", "xsl", "plist", "svg"],
+        "css" => vec!["css"],
+        "json" => vec!["json", "jsonc", "json5"],
+        "php" => vec!["php"],
+
+        // Functional languages
+        "rust" => vec!["rust", "rs"],
+        "go" => vec!["go", "golang"],
+        "haskell" => vec!["haskell", "hs"],
+        "ocaml" => vec!["ocaml", "ml"],
+        "erlang" => vec!["erlang", "erl"],
+        "elixir" => vec!["elixir"],
+        "fsharp" => vec!["fsharp", "fs", "fsx", "fsi", "fsscript"],
+        "elm" => vec!["elm"],
+
+        // Scripting languages
+        "python" => vec!["python", "py", "gyp"],
         "ruby" => vec!["ruby", "rb", "gemspec", "podspec", "thor", "irb"],
+        "perl" => vec!["perl", "pl", "pm"],
+        "lua" => vec!["lua", "pluto"],
+        "r" => vec!["r"],
+
+        // Mobile
+        "dart" => vec!["dart"],
+        "swift" => vec!["swift"],
+
+        // Data & Config
+        "yaml" => vec!["yaml", "yml"],
+        "toml" => vec!["toml"],
+        "sql" => vec!["sql"],
+        "graphql" => vec!["graphql", "gql"],
+
+        // Build & DevOps
+        "dockerfile" => vec!["dockerfile", "docker"],
+        "makefile" => vec!["makefile", "mk", "mak", "make"],
+        "nix" => vec!["nix"],
+
+        // Documentation
+        "markdown" => vec!["markdown", "md", "mkdown", "mkd"],
+        "latex" => vec!["tex"],
+
+        // Blockchain
+        "solidity" => vec!["solidity", "sol"],
+
+        // Other
+        "zig" => vec!["zig"],
+        "matlab" => vec!["matlab"],
+
         // Default: use the language name itself
         _ => vec![lang_name],
     }
