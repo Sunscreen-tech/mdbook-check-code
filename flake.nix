@@ -89,9 +89,16 @@
             export CLANG="${sunscreen-llvm}/bin/clang"
             export RUST_LOG=info
 
+            # Set XDG_DATA_HOME to a temporary location for approval storage
+            # This allows the approval mechanism to work in the nix sandbox
+            export XDG_DATA_HOME=$TMPDIR/xdg-data
+
             # Replace the mdbook-check-code path in book.toml
             # to point to the built binary in this derivation.
             sed -i "s|../../target/release/mdbook-check-code|${mdbook-check-code}/bin/mdbook-check-code|g" book.toml
+
+            # Approve the book.toml for security
+            ${mdbook-check-code}/bin/mdbook-check-code allow
 
             mdbook build
 

@@ -15,6 +15,14 @@ pub fn compute_hash(path: &Path, content: &str) -> String {
 
 /// Get the approval directory path
 fn get_approval_dir() -> Result<PathBuf> {
+    // Check for XDG_DATA_HOME environment variable first (respects XDG standard on all platforms)
+    if let Ok(xdg_data_home) = std::env::var("XDG_DATA_HOME") {
+        return Ok(PathBuf::from(xdg_data_home)
+            .join("mdbook-check-code")
+            .join("allow"));
+    }
+
+    // Fall back to platform-specific defaults via directories crate
     let proj_dirs = ProjectDirs::from("", "", "mdbook-check-code")
         .context("Failed to determine project directories")?;
     Ok(proj_dirs.data_dir().join("allow"))
