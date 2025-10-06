@@ -1,13 +1,15 @@
+mod approval;
 mod config;
 mod extractor;
 mod language;
 mod preprocessor;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use mdbook::preprocess::{CmdPreprocessor, Preprocessor};
 use preprocessor::CheckCodePreprocessor;
 use std::io;
+use std::path::PathBuf;
 use std::process::exit;
 
 const LONG_ABOUT: &str = r##"A configuration-driven mdBook preprocessor that validates code blocks by compiling
@@ -93,6 +95,14 @@ enum Commands {
         /// The renderer name to check (e.g., "html", "markdown")
         renderer: String,
     },
+    /// Approve the current book.toml for code execution
+    Allow,
+    /// Remove approval for the current book.toml
+    Deny,
+    /// Show approval status for the current book
+    Status,
+    /// List all approved books
+    List,
 }
 
 pub fn main() {
@@ -110,6 +120,75 @@ pub fn main() {
                 exit(1);
             }
         }
+        Some(Commands::Allow) => {
+            let book_toml = match find_book_toml() {
+                Ok(path) => path,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    exit(1);
+                }
+            };
+            if let Err(e) = approval::approve(&book_toml) {
+                eprintln!("Error: {}", e);
+                exit(1);
+            }
+            println!("Approved: {}", book_toml.display());
+            exit(0);
+        }
+        Some(Commands::Deny) => {
+            let book_toml = match find_book_toml() {
+                Ok(path) => path,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    exit(1);
+                }
+            };
+            if let Err(e) = approval::deny(&book_toml) {
+                eprintln!("Error: {}", e);
+                exit(1);
+            }
+            println!("Removed approval: {}", book_toml.display());
+            exit(0);
+        }
+        Some(Commands::Status) => {
+            let book_toml = match find_book_toml() {
+                Ok(path) => path,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    exit(1);
+                }
+            };
+            match approval::is_approved(&book_toml) {
+                Ok(true) => {
+                    println!("Approved: {}", book_toml.display());
+                    exit(0);
+                }
+                Ok(false) => {
+                    println!("Not approved: {}", book_toml.display());
+                    exit(1);
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    exit(1);
+                }
+            }
+        }
+        Some(Commands::List) => match approval::list_approved() {
+            Ok(approved) => {
+                if approved.is_empty() {
+                    println!("No approved books");
+                } else {
+                    for path in approved {
+                        println!("{}", path);
+                    }
+                }
+                exit(0);
+            }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                exit(1);
+            }
+        },
         None => {
             // Run as preprocessor (default when called by mdbook)
             if let Err(_e) = handle_preprocessing() {
@@ -118,6 +197,17 @@ pub fn main() {
             }
         }
     }
+}
+
+fn find_book_toml() -> Result<PathBuf> {
+    let current_dir = std::env::current_dir().context("Failed to get current directory")?;
+    let book_toml = current_dir.join("book.toml");
+
+    if !book_toml.exists() {
+        anyhow::bail!("No book.toml found in current directory");
+    }
+
+    Ok(book_toml)
 }
 
 fn handle_preprocessing() -> Result<()> {

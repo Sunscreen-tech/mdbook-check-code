@@ -62,6 +62,43 @@ impl Preprocessor for CheckCodePreprocessor {
     }
 
     fn run(&self, ctx: &PreprocessorContext, book: Book) -> Result<Book> {
+        // Check if book.toml is approved
+        let book_toml_path = ctx.root.join("book.toml");
+
+        if !crate::approval::is_approved(&book_toml_path)? {
+            let now = Local::now();
+            let timestamp = now.format("%Y-%m-%d %H:%M:%S");
+            eprintln!(
+                "{} [ERROR] (mdbook_check_code): book.toml not approved for code execution",
+                timestamp
+            );
+            eprintln!("{} [ERROR] (mdbook_check_code): ", timestamp);
+            eprintln!(
+                "{} [ERROR] (mdbook_check_code): For security, mdbook-check-code requires explicit approval before",
+                timestamp
+            );
+            eprintln!(
+                "{} [ERROR] (mdbook_check_code): running compilers specified in book.toml.",
+                timestamp
+            );
+            eprintln!("{} [ERROR] (mdbook_check_code): ", timestamp);
+            eprintln!(
+                "{} [ERROR] (mdbook_check_code): To approve this configuration after reviewing it:",
+                timestamp
+            );
+            eprintln!(
+                "{} [ERROR] (mdbook_check_code):   mdbook-check-code allow",
+                timestamp
+            );
+            eprintln!("{} [ERROR] (mdbook_check_code): ", timestamp);
+            eprintln!(
+                "{} [ERROR] (mdbook_check_code): Current book.toml: {}",
+                timestamp,
+                book_toml_path.display()
+            );
+            anyhow::bail!("book.toml not approved");
+        }
+
         // Parse configuration
         let config = CheckCodeConfig::from_preprocessor_context(ctx)?;
 
