@@ -61,7 +61,7 @@ impl Preprocessor for CheckCodePreprocessor {
         "check-code"
     }
 
-    fn run(&self, ctx: &PreprocessorContext, book: Book) -> Result<Book> {
+    fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
         // Check if book.toml is approved
         let book_toml_path = ctx.root.join("book.toml");
 
@@ -115,9 +115,11 @@ impl Preprocessor for CheckCodePreprocessor {
         let mut failed_files = HashSet::new();
         let mut stats: HashMap<String, usize> = HashMap::new();
 
-        // Process each chapter in the book
-        for section in &book.sections {
-            if let BookItem::Chapter(chapter) = section {
+        // Process all chapters recursively (including nested ones)
+        // Using Book::for_each_mut() is the standard pattern in mdBook preprocessors
+        // and automatically handles traversal of chapter.sub_items at all depths
+        book.for_each_mut(|item| {
+            if let BookItem::Chapter(chapter) = item {
                 if let Some(chapter_path) = &chapter.path {
                     let full_path = src_dir.join(chapter_path);
 
@@ -136,7 +138,7 @@ impl Preprocessor for CheckCodePreprocessor {
                     }
                 }
             }
-        }
+        });
 
         if !failed_files.is_empty() {
             let now = Local::now();
