@@ -1,7 +1,8 @@
 { lib, stdenv, fetchurl, autoPatchelfHook, zlib }:
 
 let
-  version = "2025-09-30";
+  version = "2025.09.30";
+  fileVersion = builtins.replaceStrings [ "." ] [ "-" ] version;
   urlBase =
     "https://github.com/Sunscreen-tech/sunscreen-llvm/releases/download/v${version}";
 
@@ -11,17 +12,17 @@ in stdenv.mkDerivation rec {
 
   src = if stdenv.isDarwin then
     fetchurl {
-      url = "${urlBase}/parasol-compiler-macos-aarch64-${version}.tar.gz";
+      url = "${urlBase}/parasol-compiler-macos-aarch64-${fileVersion}.tar.gz";
       sha256 = "0ra93mji3j9km7ia21gsqswn49a3abwc1ml1xq643hzq4xigyqjd";
     }
   else if stdenv.isAarch64 then
     fetchurl {
-      url = "${urlBase}/parasol-compiler-linux-aarch64-${version}.tar.gz";
+      url = "${urlBase}/parasol-compiler-linux-aarch64-${fileVersion}.tar.gz";
       sha256 = "197fybbjvimnyqwwn3q7s9yrljbqp57s42n9znpckmnbcbp8p373";
     }
   else
     fetchurl {
-      url = "${urlBase}/parasol-compiler-linux-x86-64-${version}.tar.gz";
+      url = "${urlBase}/parasol-compiler-linux-x86-64-${fileVersion}.tar.gz";
       sha256 = "1p0418nqzs6a2smrbqiyrxj34pimm6qzj7k29l4ys226cz6kfz2r";
     };
 
