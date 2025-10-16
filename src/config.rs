@@ -13,6 +13,7 @@ use std::path::Path;
 ///
 /// ```toml
 /// [preprocessor.check-code]
+/// parallel_jobs = 4  # Optional: limit parallel compilations (default: all CPUs)
 ///
 /// [preprocessor.check-code.languages.c]
 /// enabled = true
@@ -23,6 +24,12 @@ use std::path::Path;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct CheckCodeConfig {
+    /// Number of parallel compilation jobs.
+    /// If None or 0, uses all available CPU cores (default behavior).
+    /// Set to 1 for sequential compilation.
+    #[serde(default)]
+    pub parallel_jobs: Option<usize>,
+
     /// Language-specific configurations indexed by language name
     #[serde(default)]
     pub languages: HashMap<String, LanguageConfig>,
