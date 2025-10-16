@@ -3,6 +3,7 @@ use crate::config::CheckCodeConfig;
 use crate::language::LanguageRegistry;
 use crate::{compilation, reporting, task_collector};
 use anyhow::{Context, Result};
+use chrono::Local;
 use mdbook::book::Book;
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use tempfile::TempDir;
@@ -49,12 +50,7 @@ impl Default for CheckCodePreprocessor {
 }
 
 impl CheckCodePreprocessor {
-    /// Runs the preprocessor asynchronously.
-    ///
-    /// This is the core async implementation that processes all code blocks.
     pub async fn run_async(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
-        use chrono::Local;
-
         eprintln!(
             "{} [INFO] (mdbook_check_code): Preprocessor started",
             Local::now().format("%Y-%m-%d %H:%M:%S")
@@ -82,7 +78,7 @@ impl CheckCodePreprocessor {
 
         log::debug!("Collected {} compilation tasks", tasks.len());
 
-        let max_concurrent = get_max_concurrency(&config);
+        let max_concurrent = get_max_concurrency(config.parallel_jobs);
         log::debug!(
             "Using max_concurrent = {} ({})",
             max_concurrent,
@@ -113,8 +109,6 @@ impl Preprocessor for CheckCodePreprocessor {
     }
 
     fn run(&self, ctx: &PreprocessorContext, book: Book) -> Result<Book> {
-        // Bridge to async implementation using the runtime created in main()
-        // This is always called from main() which creates the runtime first
         tokio::runtime::Handle::current().block_on(self.run_async(ctx, book))
     }
 
@@ -123,9 +117,8 @@ impl Preprocessor for CheckCodePreprocessor {
     }
 }
 
-fn get_max_concurrency(config: &CheckCodeConfig) -> usize {
-    config
-        .parallel_jobs
+fn get_max_concurrency(parallel_jobs: Option<usize>) -> usize {
+    parallel_jobs
         .filter(|&j| j > 0)
         .unwrap_or_else(|| num_cpus::get() * 8) // 8x for I/O-bound subprocess work
 }

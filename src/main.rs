@@ -13,7 +13,7 @@ use clap::{Parser, Subcommand};
 use mdbook::preprocess::{CmdPreprocessor, Preprocessor};
 use preprocessor::CheckCodePreprocessor;
 use reporting::print_error;
-use std::io;
+use std::io::{stdin, stdout, Write};
 use std::path::PathBuf;
 use std::process::exit;
 
@@ -116,7 +116,6 @@ pub fn main() {
     // Initialize logging with mdBook-compatible format
     env_logger::Builder::from_default_env()
         .format(|buf, record| {
-            use std::io::Write;
             writeln!(
                 buf,
                 "{} [{}] (mdbook_check_code): {}",
@@ -231,12 +230,12 @@ fn find_book_toml() -> Result<PathBuf> {
 }
 
 async fn handle_preprocessing_async() -> Result<()> {
-    let (ctx, book) = CmdPreprocessor::parse_input(io::stdin())?;
+    let (ctx, book) = CmdPreprocessor::parse_input(stdin())?;
 
     let preprocessor = CheckCodePreprocessor::new();
     let processed_book = preprocessor.run_async(&ctx, book).await?;
 
-    serde_json::to_writer(io::stdout(), &processed_book)?;
+    serde_json::to_writer(stdout(), &processed_book)?;
 
     Ok(())
 }

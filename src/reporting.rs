@@ -1,7 +1,7 @@
 use crate::compilation::CompilationResult;
 use anyhow::Result;
 use chrono::Local;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::path::Path;
 use std::time::Duration;
@@ -36,8 +36,6 @@ pub fn report_approval_error(book_toml_path: &Path) -> Result<()> {
 ///
 /// Returns an error after printing all failures (to stop the build).
 pub fn report_compilation_errors(failed_results: &[&CompilationResult]) -> Result<()> {
-    use std::collections::HashSet;
-
     for result in failed_results {
         print_error("Compilation failed");
         print_error(format!("File: {}", result.chapter_path().display()));

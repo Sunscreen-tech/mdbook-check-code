@@ -369,18 +369,19 @@ impl ConfiguredLanguage {
     /// - The code fails to compile
     pub async fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
         // Write code with optional preamble to temp file (async)
-        let mut file = File::create(temp_file)
-            .await
-            .context("Failed to create temporary file")?;
+        {
+            let mut file = File::create(temp_file)
+                .await
+                .context("Failed to create temporary file")?;
 
-        if let Some(ref preamble) = self.config.preamble {
-            file.write_all(preamble.as_bytes()).await?;
-            file.write_all(b"\n\n").await?;
-        }
+            if let Some(ref preamble) = self.config.preamble {
+                file.write_all(preamble.as_bytes()).await?;
+                file.write_all(b"\n\n").await?;
+            }
 
-        file.write_all(code.as_bytes()).await?;
-        file.flush().await?;
-        drop(file);
+            file.write_all(code.as_bytes()).await?;
+            file.flush().await?;
+        } // file is automatically dropped here
 
         // Execute compiler with configured flags (async)
         let output = Command::new(&self.config.compiler)
