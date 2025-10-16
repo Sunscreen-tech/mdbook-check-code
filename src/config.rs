@@ -155,7 +155,7 @@ impl LanguageConfig {
     /// A vector of fence marker strings for this language.
     pub fn get_fence_markers(&self, lang_name: &str) -> Vec<String> {
         if self.fence_markers.is_empty() {
-            crate::language::get_default_fence_markers(lang_name)
+            crate::language::get_language_metadata(lang_name).fence_markers
         } else {
             self.fence_markers.clone()
         }

@@ -81,12 +81,8 @@ pub fn collect_compilation_tasks(
                             }
                         };
 
-                    let block_name = format!(
-                        "{}_{}_block_{}",
-                        language.name(),
-                        chapter_name,
-                        task_counter
-                    );
+                    let block_name =
+                        format!("{}_{}_block_{}", language, chapter_name, task_counter);
                     task_counter += 1;
 
                     let temp_file_path = temp_dir.path().join(format!(
