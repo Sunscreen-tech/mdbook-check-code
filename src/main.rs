@@ -1,8 +1,11 @@
 mod approval;
+mod compilation;
 mod config;
 mod extractor;
 mod language;
 mod preprocessor;
+mod reporting;
+mod task_collector;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -106,8 +109,20 @@ enum Commands {
 }
 
 pub fn main() {
-    // Initialize logging
-    env_logger::init();
+    // Initialize logging with mdBook-compatible format
+    env_logger::Builder::from_default_env()
+        .format(|buf, record| {
+            use chrono::Local;
+            use std::io::Write;
+            writeln!(
+                buf,
+                "{} [{}] (mdbook_check_code): {}",
+                Local::now().format("%Y-%m-%d %H:%M:%S"),
+                record.level(),
+                record.args()
+            )
+        })
+        .init();
 
     let cli = Cli::parse();
 

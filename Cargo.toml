@@ -22,3 +22,4 @@ chrono = "0.4"
 clap = { version = "4.5", features = ["derive", "cargo"] }
 sha2 = "0.10.9"
 directories = "6.0.0"
+rayon = "1.11"
