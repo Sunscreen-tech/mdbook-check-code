@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Format markdown files in the repository using Prettier
+# This matches the formatting that Zed editor uses
+
+show_help() {
+  cat <<EOF
+Format markdown files using Prettier
+
+Usage:
+  format-markdown           Format all markdown files (git-tracked, or all if not in repo)
+  format-markdown --check   Check formatting without modifying files
+  format-markdown <file>    Format specific file
+  format-markdown -h        Show this help message
+
+Options:
+  -h, --help    Show this help message
+  --check       Check formatting (exit 1 if files need formatting)
+EOF
+}
+
+# Find all markdown files using git if available, otherwise use find
+find_markdown_files() {
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    # In git repo: use git ls-files
+    git ls-files "*.md"
+  else
+    # Not in git repo (e.g., nix sandbox): use find
+    find . -name "*.md" -type f
+  fi
+}
+
+# Process arguments
+CHECK_MODE=false
+TARGET_FILE=""
+
+if [ $# -eq 0 ]; then
+  # No arguments: format all markdown files
+  CHECK_MODE=false
+elif [ "$1" = "--check" ]; then
+  # Check mode
+  CHECK_MODE=true
+elif [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+  show_help
+  exit 0
+else
+  # Format specific file
+  if [ ! -f "$1" ]; then
+    echo "Error: file not found: $1" >&2
+    exit 1
+  fi
+  TARGET_FILE="$1"
+fi
+
+# Execute formatting or checking
+if [ -n "$TARGET_FILE" ]; then
+  # Format specific file
+  prettier --write "$TARGET_FILE"
+  echo "Formatted $TARGET_FILE"
+elif [ "$CHECK_MODE" = true ]; then
+  # Check all markdown files
+  files=$(find_markdown_files)
+  if [ -z "$files" ]; then
+    echo "No markdown files found"
+    exit 0
+  fi
+
+  if ! echo "$files" | xargs prettier --check; then
+    echo "Error: markdown files need formatting. Run 'format-markdown' to fix." >&2
+    exit 1
+  fi
+  echo "Markdown formatting check passed"
+else
+  # Format all markdown files
+  files=$(find_markdown_files)
+  if [ -z "$files" ]; then
+    echo "No markdown files found"
+    exit 0
+  fi
+
+  echo "$files" | xargs prettier --write
+  echo "Markdown formatting complete"
+fi

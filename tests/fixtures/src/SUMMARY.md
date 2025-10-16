@@ -10,5 +10,5 @@
   - [TypeScript Examples](other_langs/ts_examples/README.md)
     - [TypeScript Example](other_langs/ts_examples/typescript_example.md)
 - [Solidity Example](solidity_example.md)
-<!-- Uncomment to test error output: -->
-<!-- - [Test Error](test_error.md) -->
+  <!-- Uncomment to test error output: -->
+  <!-- - [Test Error](test_error.md) -->
