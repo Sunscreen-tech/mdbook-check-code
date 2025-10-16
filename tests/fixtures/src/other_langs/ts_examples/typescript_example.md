@@ -8,7 +8,7 @@ Here's a simple TypeScript function:
 
 ```typescript
 function add(a: number, b: number): number {
-    return a + b;
+  return a + b;
 }
 ```
 
@@ -16,12 +16,12 @@ function add(a: number, b: number): number {
 
 ```typescript
 interface User {
-    name: string;
-    age: number;
+  name: string;
+  age: number;
 }
 
 function greet(user: User): string {
-    return `Hello, ${user.name}! You are ${user.age} years old.`;
+  return `Hello, ${user.name}! You are ${user.age} years old.`;
 }
 ```
 
@@ -29,7 +29,7 @@ function greet(user: User): string {
 
 ```ts
 function identity<T>(arg: T): T {
-    return arg;
+  return arg;
 }
 ```
 

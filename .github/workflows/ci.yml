@@ -64,6 +64,24 @@ jobs:
       - name: Check formatting
         run: nix build -L .#checks.x86_64-linux.mdbook-check-code-fmt
 
+  markdown-formatting:
+    name: Markdown Formatting
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Check markdown formatting
+        run: nix build -L .#checks.x86_64-linux.markdown-format-check
+
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
@@ -81,90 +99,3 @@ jobs:
 
       - name: Run integration tests
         run: nix build -L .#checks.x86_64-linux.runE2ETests
-
-  #build:
-  #  name: Build ${{ matrix.system }}
-  #  needs: check
-  #  runs-on: ${{ matrix.runner }}
-  #  permissions:
-  #    id-token: write
-  #    contents: read
-  #  strategy:
-  #    fail-fast: false
-  #    matrix:
-  #      include:
-  #        - system: x86_64-linux
-  #          runner: ubuntu-latest
-  #        - system: aarch64-darwin
-  #          runner: macos-14
-  #  steps:
-  #    - uses: actions/checkout@v4
-
-  #    - name: Install Nix
-  #      uses: DeterminateSystems/determinate-nix-action@v3
-
-  #    - name: Setup Magic Nix Cache
-  #      uses: DeterminateSystems/magic-nix-cache-action@v8
-
-  #    - name: Build mdbook-check-code
-  #      run: nix build .#mdbook-check-code
-
-  #    - name: Create tarball
-  #      run: |
-  #        mkdir -p dist
-  #        cp result/bin/mdbook-check-code dist/
-  #        tar -czf mdbook-check-code-${{ matrix.system }}.tar.gz -C dist mdbook-check-code
-
-  #    - name: Upload artifact
-  #      uses: actions/upload-artifact@v4
-  #      with:
-  #        name: mdbook-check-code-${{ matrix.system }}
-  #        path: mdbook-check-code-${{ matrix.system }}.tar.gz
-  #        if-no-files-found: error
-
-  # release:
-  #   name: Create Release
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/main'
-  #   permissions:
-  #     contents: write
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Download all artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         path: artifacts
-
-  #     - name: Prepare release assets
-  #       run: |
-  #         mkdir -p release
-  #         find artifacts -name "*.tar.gz" -exec cp {} release/ \;
-  #         ls -lah release/
-
-  #     - name: Generate release tag
-  #       id: tag
-  #       run: |
-  #         SHORT_SHA=$(git rev-parse --short HEAD)
-  #         TAG="v0.1.0-${SHORT_SHA}"
-  #         echo "tag=${TAG}" >> $GITHUB_OUTPUT
-
-  #     - name: Create Release
-  #       uses: ncipollo/release-action@v1
-  #       with:
-  #         artifacts: "release/*.tar.gz"
-  #         tag: ${{ steps.tag.outputs.tag }}
-  #         name: "Release ${{ steps.tag.outputs.tag }}"
-  #         body: |
-  #           ## Automated Release
-
-  #           Built from commit ${{ github.sha }}
-
-  #           ### Platforms
-  #           - x86_64-linux
-  #           - aarch64-darwin (Apple Silicon)
-
-  #           Generated automatically by GitHub Actions
-  #         draft: false
-  #         prerelease: false

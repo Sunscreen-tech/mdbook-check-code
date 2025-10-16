@@ -68,11 +68,13 @@ The preprocessor validates all code blocks during the build process and reports 
 ## Configuration
 
 All language behavior is configured in `book.toml`. Each language requires:
+
 - `enabled` (bool) - Whether to check this language
 - `compiler` (string) - Compiler executable (supports `${VAR}` env var expansion)
 - `flags` (array) - Compiler flags
 
 Optional:
+
 - `preamble` (string) - Code prepended to all blocks
 - `fence_markers` (array) - Custom fence identifiers
 

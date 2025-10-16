@@ -42,6 +42,32 @@
 
         fixture-src = gitignoreSource ./tests/fixtures;
 
+        # Map script names to their specific dependencies
+        scriptDeps = {
+          format-markdown = with pkgs; [ git nodePackages.prettier ];
+          # Future scripts and their dependencies go here
+        };
+
+        # Read all scripts from scripts/ directory
+        scriptFiles = builtins.readDir ./scripts;
+
+        # Wrap each script with its dependencies
+        wrappedScripts = pkgs.lib.mapAttrs' (filename: _:
+          let
+            # Use filename as script name (removes .sh extension if present)
+            scriptName = pkgs.lib.removeSuffix ".sh" filename;
+            # Get script-specific dependencies (empty list if not defined)
+            deps = scriptDeps.${scriptName} or [];
+          in
+          pkgs.lib.nameValuePair scriptName (
+            pkgs.writeShellApplication {
+              name = scriptName;
+              runtimeInputs = deps;
+              text = builtins.readFile (./scripts + "/${filename}");
+            }
+          )
+        ) scriptFiles;
+
       in {
         packages = {
           inherit mdbook-check-code;
@@ -66,6 +92,17 @@
 
           # Check formatting
           mdbook-check-code-fmt = craneLib.cargoFmt { inherit src; };
+
+          # Check Markdown formatting
+          markdown-format-check = pkgs.runCommand "markdown-format-check" {
+            buildInputs = [ wrappedScripts.format-markdown ];
+            src = gitignoreSource ./.;
+          } ''
+            cd $src
+            format-markdown --check
+            mkdir -p $out
+            echo "Markdown formatting check passed" > $out/result
+          '';
 
           # The script inlined for brevity, consider extracting it
           # so that it becomes independent of nix
@@ -125,7 +162,7 @@
               nodejs
               nodePackages.typescript
               solc
-            ];
+            ] ++ (builtins.attrValues wrappedScripts);
 
             shellHook = ''
               export CLANG="${sunscreen-llvm-pkg}/bin/clang"
@@ -138,6 +175,9 @@
               echo "  node                 - Node.js runtime"
               echo "  tsc                  - TypeScript compiler"
               echo "  solc                 - Solidity compiler"
+              echo ""
+              echo "Helper scripts: ${builtins.concatStringsSep ", " (builtins.attrNames wrappedScripts)}"
+              echo "  (run with -h or --help for usage)"
               echo ""
               echo "Environment variables:"
               echo "  CLANG=${sunscreen-llvm-pkg}/bin/clang"
