@@ -1,7 +1,6 @@
 use crate::language::ConfiguredLanguage;
-use rayon::prelude::*;
+use futures::stream::{self, StreamExt};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// A compilation task representing a single code block to be compiled.
@@ -11,7 +10,7 @@ use std::time::{Duration, Instant};
 pub struct CompilationTask {
     language: ConfiguredLanguage,
     temp_path: PathBuf,
-    chapter_path: Arc<PathBuf>,
+    chapter_path: PathBuf,
     block_index: usize,
     code: String,
 }
@@ -20,7 +19,7 @@ impl CompilationTask {
     pub fn new(
         language: ConfiguredLanguage,
         temp_path: PathBuf,
-        chapter_path: Arc<PathBuf>,
+        chapter_path: PathBuf,
         block_index: usize,
         code: String,
     ) -> Self {
@@ -33,15 +32,15 @@ impl CompilationTask {
         }
     }
 
-    /// Executes compilation and consumes the task to produce a result.
+    /// Executes compilation asynchronously and consumes the task to produce a result.
     ///
     /// This method performs the actual compilation, measures duration,
     /// and converts any errors into the appropriate result format.
-    pub fn compile(self) -> CompilationResult {
+    pub async fn compile(self) -> CompilationResult {
         log::debug!("Compiling {} block", self.language.name());
 
         let start = Instant::now();
-        let compile_result = self.language.compile(&self.code, &self.temp_path);
+        let compile_result = self.language.compile(&self.code, &self.temp_path).await;
         let duration = start.elapsed();
 
         CompilationResult {
@@ -62,7 +61,7 @@ impl CompilationTask {
 pub struct CompilationResult {
     language: ConfiguredLanguage,
     duration: Duration,
-    chapter_path: Arc<PathBuf>,
+    chapter_path: PathBuf,
     block_index: usize,
     code: String,
     error_message: Option<String>,
@@ -99,20 +98,24 @@ impl CompilationResult {
     }
 }
 
-/// Compiles all tasks in parallel using the provided thread pool.
+/// Compiles all tasks asynchronously with controlled concurrency.
+///
+/// Uses `buffer_unordered` to limit the number of concurrent compilation tasks,
+/// which controls how many compiler subprocesses run simultaneously.
 ///
 /// Returns a tuple of (results, total_parallel_duration).
-pub fn compile_tasks(
+pub async fn compile_tasks(
     tasks: Vec<CompilationTask>,
-    thread_pool: &rayon::ThreadPool,
+    max_concurrent: usize,
 ) -> (Vec<CompilationResult>, Duration) {
     let parallel_start = Instant::now();
-    let results: Vec<CompilationResult> = thread_pool.install(|| {
-        tasks
-            .into_par_iter()
-            .map(CompilationTask::compile)
-            .collect()
-    });
+
+    let results: Vec<CompilationResult> = stream::iter(tasks)
+        .map(|task| task.compile())
+        .buffer_unordered(max_concurrent)
+        .collect()
+        .await;
+
     let parallel_duration = parallel_start.elapsed();
 
     (results, parallel_duration)

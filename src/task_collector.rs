@@ -4,7 +4,6 @@ use crate::language::LanguageRegistry;
 use anyhow::Result;
 use mdbook::book::{Book, BookItem};
 use std::path::Path;
-use std::sync::Arc;
 use tempfile::TempDir;
 
 /// Maximum size of a single code block in bytes (1MB)
@@ -62,8 +61,6 @@ pub fn collect_compilation_tasks(
                     .unwrap_or("unknown")
                     .trim_end_matches(".md");
 
-                let chapter_path_arc = Arc::new(chapter_path.clone());
-
                 for (i, (final_code, block)) in code_blocks.into_iter().enumerate() {
                     if final_code.len() > MAX_CODE_BLOCK_SIZE {
                         collection_errors.push(format!(
@@ -101,7 +98,7 @@ pub fn collect_compilation_tasks(
                     tasks.push(CompilationTask::new(
                         language,
                         temp_file_path,
-                        Arc::clone(&chapter_path_arc),
+                        chapter_path.clone(),
                         i,
                         final_code,
                     ));
@@ -111,11 +108,8 @@ pub fn collect_compilation_tasks(
     });
 
     if !collection_errors.is_empty() {
-        use chrono::Local;
-        let now = Local::now();
-        let timestamp = now.format("%Y-%m-%d %H:%M:%S");
         for error in &collection_errors {
-            eprintln!("{} [ERROR] (mdbook_check_code): {}", timestamp, error);
+            log::error!("{}", error);
         }
         anyhow::bail!(
             "Failed to collect compilation tasks due to {} error(s)",

@@ -8,10 +8,12 @@ mod reporting;
 mod task_collector;
 
 use anyhow::{Context, Result};
+use chrono::Local;
 use clap::{Parser, Subcommand};
 use mdbook::preprocess::{CmdPreprocessor, Preprocessor};
 use preprocessor::CheckCodePreprocessor;
-use std::io;
+use reporting::print_error;
+use std::io::{stdin, stdout, Write};
 use std::path::PathBuf;
 use std::process::exit;
 
@@ -27,6 +29,8 @@ process. Configure it in your book.toml file and mdBook will handle execution.
 
 ```toml
 [preprocessor.check-code]
+# Optional: number of parallel compilation tasks
+# parallel_jobs = 32
 
 # C configuration
 [preprocessor.check-code.languages.c]
@@ -112,8 +116,6 @@ pub fn main() {
     // Initialize logging with mdBook-compatible format
     env_logger::Builder::from_default_env()
         .format(|buf, record| {
-            use chrono::Local;
-            use std::io::Write;
             writeln!(
                 buf,
                 "{} [{}] (mdbook_check_code): {}",
@@ -123,6 +125,8 @@ pub fn main() {
             )
         })
         .init();
+
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     let cli = Cli::parse();
 
@@ -139,12 +143,12 @@ pub fn main() {
             let book_toml = match find_book_toml() {
                 Ok(path) => path,
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    print_error(e);
                     exit(1);
                 }
             };
             if let Err(e) = approval::approve(&book_toml) {
-                eprintln!("Error: {}", e);
+                print_error(e);
                 exit(1);
             }
             println!("Approved: {}", book_toml.display());
@@ -154,12 +158,12 @@ pub fn main() {
             let book_toml = match find_book_toml() {
                 Ok(path) => path,
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    print_error(e);
                     exit(1);
                 }
             };
             if let Err(e) = approval::deny(&book_toml) {
-                eprintln!("Error: {}", e);
+                print_error(e);
                 exit(1);
             }
             println!("Removed approval: {}", book_toml.display());
@@ -169,7 +173,7 @@ pub fn main() {
             let book_toml = match find_book_toml() {
                 Ok(path) => path,
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    print_error(e);
                     exit(1);
                 }
             };
@@ -183,7 +187,7 @@ pub fn main() {
                     exit(1);
                 }
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    print_error(e);
                     exit(1);
                 }
             }
@@ -200,14 +204,14 @@ pub fn main() {
                 exit(0);
             }
             Err(e) => {
-                eprintln!("Error: {}", e);
+                print_error(e);
                 exit(1);
             }
         },
         None => {
             // Run as preprocessor (default when called by mdbook)
-            if let Err(_e) = handle_preprocessing() {
-                // Error already printed in preprocessor with proper formatting
+            if let Err(e) = runtime.block_on(handle_preprocessing_async()) {
+                print_error(format!("Preprocessing failed: {}", e));
                 exit(1);
             }
         }
@@ -225,13 +229,13 @@ fn find_book_toml() -> Result<PathBuf> {
     Ok(book_toml)
 }
 
-fn handle_preprocessing() -> Result<()> {
-    let (ctx, book) = CmdPreprocessor::parse_input(io::stdin())?;
+async fn handle_preprocessing_async() -> Result<()> {
+    let (ctx, book) = CmdPreprocessor::parse_input(stdin())?;
 
     let preprocessor = CheckCodePreprocessor::new();
-    let processed_book = preprocessor.run(&ctx, book)?;
+    let processed_book = preprocessor.run_async(&ctx, book).await?;
 
-    serde_json::to_writer(io::stdout(), &processed_book)?;
+    serde_json::to_writer(stdout(), &processed_book)?;
 
     Ok(())
 }

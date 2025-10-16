@@ -28,6 +28,8 @@ Add the preprocessor and language configurations to `book.toml`:
 
 ```toml
 [preprocessor.check-code]
+# Optional: number of parallel compilation tasks (default: 8x CPU count)
+# parallel_jobs = 32
 
 # C language configuration
 [preprocessor.check-code.languages.c]
@@ -66,6 +68,14 @@ The preprocessor validates all code blocks during the build process and reports 
 - `propagate` - Make code available to subsequent blocks in the same file
 
 ## Configuration
+
+### Preprocessor Settings
+
+Configure in `[preprocessor.check-code]` section:
+
+- `parallel_jobs` (number, optional) - Number of parallel compilation tasks
+
+### Language Configuration
 
 All language behavior is configured in `book.toml`. Each language requires:
 

@@ -1,56 +1,31 @@
 use crate::compilation::CompilationResult;
 use anyhow::Result;
-use std::collections::HashMap;
+use chrono::Local;
+use std::collections::{HashMap, HashSet};
+use std::fmt::Display;
 use std::path::Path;
 use std::time::Duration;
 
-/// Formats an error message with mdBook-style timestamp and prefix.
-fn format_error<'a>(
-    timestamp: &chrono::format::DelayedFormat<chrono::format::StrftimeItems<'a>>,
-    message: &str,
-) -> String {
-    format!("{} [ERROR] (mdbook_check_code): {}", timestamp, message)
+/// Prints an error message to stderr with mdBook-style timestamp and prefix.
+pub fn print_error<S: Display>(message: S) {
+    eprintln!(
+        "{} [ERROR] (mdbook_check_code): {}",
+        Local::now().format("%Y-%m-%d %H:%M:%S"),
+        message
+    );
 }
 
 /// Reports the approval error to stderr with mdBook-style formatting.
 pub fn report_approval_error(book_toml_path: &Path) -> Result<()> {
-    use chrono::Local;
-    let now = Local::now();
-    let timestamp = now.format("%Y-%m-%d %H:%M:%S");
-
-    eprintln!(
-        "{}",
-        format_error(&timestamp, "book.toml not approved for code execution")
-    );
-    eprintln!("{}", format_error(&timestamp, ""));
-    eprintln!(
-        "{}",
-        format_error(
-            &timestamp,
-            "For security, mdbook-check-code requires explicit approval before"
-        )
-    );
-    eprintln!(
-        "{}",
-        format_error(&timestamp, "running compilers specified in book.toml.")
-    );
-    eprintln!("{}", format_error(&timestamp, ""));
-    eprintln!(
-        "{}",
-        format_error(
-            &timestamp,
-            "To approve this configuration after reviewing it:"
-        )
-    );
-    eprintln!("{}", format_error(&timestamp, "  mdbook-check-code allow"));
-    eprintln!("{}", format_error(&timestamp, ""));
-    eprintln!(
-        "{}",
-        format_error(
-            &timestamp,
-            &format!("Current book.toml: {}", book_toml_path.display())
-        )
-    );
+    print_error("book.toml not approved for code execution");
+    print_error("");
+    print_error("For security, mdbook-check-code requires explicit approval before");
+    print_error("running compilers specified in book.toml.");
+    print_error("");
+    print_error("To approve this configuration after reviewing it:");
+    print_error("  mdbook-check-code allow");
+    print_error("");
+    print_error(format!("Current book.toml: {}", book_toml_path.display()));
 
     Ok(())
 }
@@ -61,67 +36,40 @@ pub fn report_approval_error(book_toml_path: &Path) -> Result<()> {
 ///
 /// Returns an error after printing all failures (to stop the build).
 pub fn report_compilation_errors(failed_results: &[&CompilationResult]) -> Result<()> {
-    use chrono::Local;
-    use std::collections::HashSet;
-
-    let now = Local::now();
-    let timestamp = now.format("%Y-%m-%d %H:%M:%S");
-
     for result in failed_results {
-        eprintln!("{}", format_error(&timestamp, "Compilation failed"));
-        eprintln!(
-            "{}",
-            format_error(
-                &timestamp,
-                &format!("File: {}", result.chapter_path().display())
-            )
-        );
-        eprintln!(
-            "{}",
-            format_error(
-                &timestamp,
-                &format!(
-                    "Block: #{} ({})",
-                    result.block_index(),
-                    result.language().name()
-                )
-            )
-        );
-        eprintln!("{}", format_error(&timestamp, ""));
+        print_error("Compilation failed");
+        print_error(format!("File: {}", result.chapter_path().display()));
+        print_error(format!(
+            "Block: #{} ({})",
+            result.block_index(),
+            result.language().name()
+        ));
+        print_error("");
 
         if let Some(error_msg) = result.error_message() {
             for line in error_msg.lines() {
-                eprintln!("{}", format_error(&timestamp, line));
+                print_error(line);
             }
         }
 
-        eprintln!("{}", format_error(&timestamp, ""));
-        eprintln!("{}", format_error(&timestamp, "Code block:"));
-        eprintln!(
-            "{}",
-            format_error(&timestamp, &format!("```{}", result.language().name()))
-        );
+        print_error("");
+        print_error("Code block:");
+        print_error(format!("```{}", result.language().name()));
 
         for line in result.code().lines() {
-            eprintln!("{}", format_error(&timestamp, line));
+            print_error(line);
         }
 
-        eprintln!("{}", format_error(&timestamp, "```"));
-        eprintln!("{}", format_error(&timestamp, ""));
+        print_error("```");
+        print_error("");
     }
 
     let failed_files: HashSet<_> = failed_results.iter().map(|r| r.chapter_path()).collect();
-    eprintln!(
-        "{}",
-        format_error(&timestamp, "Failed to compile code in the following files:")
-    );
+    print_error("Failed to compile code in the following files:");
     for file in failed_files {
-        eprintln!(
-            "{}",
-            format_error(&timestamp, &format!("  {}", file.display()))
-        );
+        print_error(format!("  {}", file.display()));
     }
-    eprintln!("{}", format_error(&timestamp, "Code compilation failed"));
+    print_error("Code compilation failed");
 
     anyhow::bail!("Code compilation failed");
 }
@@ -134,8 +82,6 @@ pub fn report_compilation_errors(failed_results: &[&CompilationResult]) -> Resul
 /// - Detailed per-language timing (RUST_LOG=debug)
 /// - Individual block timings (RUST_LOG=debug)
 pub fn print_compilation_statistics(results: &[CompilationResult], parallel_duration: Duration) {
-    use chrono::Local;
-
     let successful_results: Vec<_> = results.iter().filter(|r| r.success()).collect();
     let total_blocks = successful_results.len();
 

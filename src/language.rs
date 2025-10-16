@@ -1,9 +1,9 @@
 use crate::config::{CheckCodeConfig, LanguageConfig};
 use anyhow::{Context, Result};
-use std::fs::File;
-use std::io::Write;
 use std::path::Path;
-use std::process::Command;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
 
 /// Get default fence markers for a language based on highlight.js language definitions.
 ///
@@ -349,7 +349,7 @@ impl ConfiguredLanguage {
         }
     }
 
-    /// Compiles or validates the given code.
+    /// Compiles or validates the given code asynchronously.
     ///
     /// # Arguments
     ///
@@ -367,23 +367,28 @@ impl ConfiguredLanguage {
     /// - The temporary file cannot be created or written
     /// - The compiler executable cannot be found or executed
     /// - The code fails to compile
-    pub fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
-        // Write code with optional preamble to temp file
-        let mut file = File::create(temp_file).context("Failed to create temporary file")?;
+    pub async fn compile(&self, code: &str, temp_file: &Path) -> Result<()> {
+        // Write code with optional preamble to temp file (async)
+        {
+            let mut file = File::create(temp_file)
+                .await
+                .context("Failed to create temporary file")?;
 
-        if let Some(ref preamble) = self.config.preamble {
-            writeln!(file, "{}", preamble)?;
-            writeln!(file)?;
-        }
+            if let Some(ref preamble) = self.config.preamble {
+                file.write_all(preamble.as_bytes()).await?;
+                file.write_all(b"\n\n").await?;
+            }
 
-        write!(file, "{}", code)?;
-        drop(file);
+            file.write_all(code.as_bytes()).await?;
+            file.flush().await?;
+        } // file is automatically dropped here
 
-        // Execute compiler with configured flags
+        // Execute compiler with configured flags (async)
         let output = Command::new(&self.config.compiler)
             .args(&self.config.flags)
             .arg(temp_file)
             .output()
+            .await
             .with_context(|| {
                 format!(
                     "Failed to execute compiler '{}' for language '{}'",
