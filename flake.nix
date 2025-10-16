@@ -10,9 +10,12 @@
       url = "github:hercules-ci/gitignore.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    sunscreen-llvm = {
+      url = "github:Sunscreen-tech/sunscreen-llvm/sunscreen";
+    };
   };
 
-  outputs = { self, nixpkgs, utils, crane, gitignore }:
+  outputs = { self, nixpkgs, utils, crane, gitignore, sunscreen-llvm }:
     utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -22,8 +25,8 @@
         craneLib = crane.mkLib pkgs;
         inherit (gitignore.lib) gitignoreSource;
 
-        # Sunscreen LLVM compiler for parasol target
-        sunscreen-llvm = pkgs.callPackage ./sunscreen-llvm.nix { };
+        # Sunscreen LLVM compiler for parasol target (from flake input)
+        sunscreen-llvm-pkg = sunscreen-llvm.packages.${system}.default;
 
         # Build mdbook-check-code using package.nix
         mdbook-check-code =
@@ -71,7 +74,7 @@
               mdbook
 
               # C compilers
-              sunscreen-llvm
+              sunscreen-llvm-pkg
               gcc
 
               # Language compilers
@@ -86,7 +89,7 @@
             # commands below will fail.
             chmod -R u+w .
 
-            export CLANG="${sunscreen-llvm}/bin/clang"
+            export CLANG="${sunscreen-llvm-pkg}/bin/clang"
             export RUST_LOG=info
 
             # Set XDG_DATA_HOME to a temporary location for approval storage
@@ -112,7 +115,7 @@
           craneLib.devShell {
             buildInputs = [
               # C compilers
-              sunscreen-llvm
+              sunscreen-llvm-pkg
               gcc
 
               # mdbook tools
@@ -125,19 +128,19 @@
             ];
 
             shellHook = ''
-              export CLANG="${sunscreen-llvm}/bin/clang"
+              export CLANG="${sunscreen-llvm-pkg}/bin/clang"
 
               echo "Development environment loaded."
               echo "Available tools:"
               echo "  cargo                - Build with 'cargo build'"
-              echo "  clang (parasol)      - ${sunscreen-llvm}/bin/clang"
+              echo "  clang (parasol)      - ${sunscreen-llvm-pkg}/bin/clang"
               echo "  gcc                  - C compiler"
               echo "  node                 - Node.js runtime"
               echo "  tsc                  - TypeScript compiler"
               echo "  solc                 - Solidity compiler"
               echo ""
               echo "Environment variables:"
-              echo "  CLANG=${sunscreen-llvm}/bin/clang"
+              echo "  CLANG=${sunscreen-llvm-pkg}/bin/clang"
             '';
           };
       });

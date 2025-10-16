@@ -34,7 +34,7 @@ flags = ["-fsyntax-only"]
 # Parasol variant - uses Sunscreen LLVM for FHE compilation
 [preprocessor.check-code.languages.c.variants.parasol]
 compiler = "${CLANG}"                    # Supports ${VAR} expansion
-flags = ["-target", "parasol", "-fsyntax-only"]
+flags = ["-target", "parasol", "-O2"]
 preamble = "#include <parasol.h>"        # Prepended to all blocks
 
 # TypeScript configuration

@@ -15,5 +15,4 @@ let
 
   # Import package.nix directly
   package = import ./package.nix { inherit craneLib gitignoreSource; };
-in
-package
+in package

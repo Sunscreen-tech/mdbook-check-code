@@ -38,7 +38,7 @@ flags = ["-fsyntax-only"]
 # Parasol variant for FHE code
 [preprocessor.check-code.languages.c.variants.parasol]
 compiler = "${CLANG}"
-flags = ["-target", "parasol", "-fsyntax-only"]
+flags = ["-target", "parasol", "-O2"]
 preamble = "#include <parasol.h>"
 ```
 
