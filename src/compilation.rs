@@ -37,7 +37,7 @@ impl CompilationTask {
     /// This method performs the actual compilation, measures duration,
     /// and converts any errors into the appropriate result format.
     pub async fn compile(self) -> CompilationResult {
-        log::debug!("Compiling {} block", self.language.name());
+        log::debug!("Compiling {} block", self.language);
 
         let start = Instant::now();
         let compile_result = self.language.compile(&self.code, &self.temp_path).await;

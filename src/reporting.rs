@@ -42,7 +42,7 @@ pub fn report_compilation_errors(failed_results: &[&CompilationResult]) -> Resul
         print_error(format!(
             "Block: #{} ({})",
             result.block_index(),
-            result.language().name()
+            result.language()
         ));
         print_error("");
 
@@ -54,7 +54,7 @@ pub fn report_compilation_errors(failed_results: &[&CompilationResult]) -> Resul
 
         print_error("");
         print_error("Code block:");
-        print_error(format!("```{}", result.language().name()));
+        print_error(format!("```{}", result.language()));
 
         for line in result.code().lines() {
             print_error(line);
@@ -88,7 +88,7 @@ pub fn print_compilation_statistics(results: &[CompilationResult], parallel_dura
     let mut lang_counts: HashMap<String, usize> = HashMap::new();
     for result in &successful_results {
         *lang_counts
-            .entry(result.language().name().to_string())
+            .entry(result.language().to_string())
             .or_insert(0) += 1;
     }
 
@@ -127,7 +127,7 @@ pub fn print_compilation_statistics(results: &[CompilationResult], parallel_dura
     for (lang, count) in sorted_stats {
         let lang_results: Vec<_> = successful_results
             .iter()
-            .filter(|r| r.language().name() == lang)
+            .filter(|r| &r.language().to_string() == lang)
             .collect();
         let lang_total: Duration = lang_results.iter().map(|r| r.duration()).sum();
         let lang_avg_ms = lang_total.as_millis() / *count as u128;
@@ -138,7 +138,7 @@ pub fn print_compilation_statistics(results: &[CompilationResult], parallel_dura
     for result in results {
         log::debug!(
             "[CODE_COMPILE_TIME] [{}] {} block #{}: {}ms",
-            result.language().name(),
+            result.language(),
             result.chapter_path().display(),
             result.block_index(),
             result.duration().as_millis()
