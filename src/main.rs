@@ -8,9 +8,11 @@ mod reporting;
 mod task_collector;
 
 use anyhow::{Context, Result};
+use chrono::Local;
 use clap::{Parser, Subcommand};
 use mdbook::preprocess::{CmdPreprocessor, Preprocessor};
 use preprocessor::CheckCodePreprocessor;
+use reporting::print_error;
 use std::io;
 use std::path::PathBuf;
 use std::process::exit;
@@ -114,7 +116,6 @@ pub fn main() {
     // Initialize logging with mdBook-compatible format
     env_logger::Builder::from_default_env()
         .format(|buf, record| {
-            use chrono::Local;
             use std::io::Write;
             writeln!(
                 buf,
@@ -126,9 +127,6 @@ pub fn main() {
         })
         .init();
 
-    // Create multi-threaded async runtime for I/O-bound subprocess work
-    // This is a single-shot program: runtime lives for entire program duration
-    // Multi-threaded provides better scalability and work-stealing scheduler
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     let cli = Cli::parse();
@@ -146,12 +144,12 @@ pub fn main() {
             let book_toml = match find_book_toml() {
                 Ok(path) => path,
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    print_error(e);
                     exit(1);
                 }
             };
             if let Err(e) = approval::approve(&book_toml) {
-                eprintln!("Error: {}", e);
+                print_error(e);
                 exit(1);
             }
             println!("Approved: {}", book_toml.display());
@@ -161,12 +159,12 @@ pub fn main() {
             let book_toml = match find_book_toml() {
                 Ok(path) => path,
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    print_error(e);
                     exit(1);
                 }
             };
             if let Err(e) = approval::deny(&book_toml) {
-                eprintln!("Error: {}", e);
+                print_error(e);
                 exit(1);
             }
             println!("Removed approval: {}", book_toml.display());
@@ -176,7 +174,7 @@ pub fn main() {
             let book_toml = match find_book_toml() {
                 Ok(path) => path,
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    print_error(e);
                     exit(1);
                 }
             };
@@ -190,7 +188,7 @@ pub fn main() {
                     exit(1);
                 }
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    print_error(e);
                     exit(1);
                 }
             }
@@ -207,19 +205,14 @@ pub fn main() {
                 exit(0);
             }
             Err(e) => {
-                eprintln!("Error: {}", e);
+                print_error(e);
                 exit(1);
             }
         },
         None => {
             // Run as preprocessor (default when called by mdbook)
             if let Err(e) = runtime.block_on(handle_preprocessing_async()) {
-                use chrono::Local;
-                eprintln!(
-                    "{} [ERROR] (mdbook_check_code): Preprocessing failed: {}",
-                    Local::now().format("%Y-%m-%d %H:%M:%S"),
-                    e
-                );
+                print_error(format!("Preprocessing failed: {}", e));
                 exit(1);
             }
         }
