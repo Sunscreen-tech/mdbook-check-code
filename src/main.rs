@@ -27,6 +27,8 @@ process. Configure it in your book.toml file and mdBook will handle execution.
 
 ```toml
 [preprocessor.check-code]
+# Optional: number of parallel compilation tasks
+# parallel_jobs = 32
 
 # C configuration
 [preprocessor.check-code.languages.c]
@@ -124,6 +126,11 @@ pub fn main() {
         })
         .init();
 
+    // Create multi-threaded async runtime for I/O-bound subprocess work
+    // This is a single-shot program: runtime lives for entire program duration
+    // Multi-threaded provides better scalability and work-stealing scheduler
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+
     let cli = Cli::parse();
 
     match cli.command {
@@ -206,8 +213,13 @@ pub fn main() {
         },
         None => {
             // Run as preprocessor (default when called by mdbook)
-            if let Err(_e) = handle_preprocessing() {
-                // Error already printed in preprocessor with proper formatting
+            if let Err(e) = runtime.block_on(handle_preprocessing_async()) {
+                use chrono::Local;
+                eprintln!(
+                    "{} [ERROR] (mdbook_check_code): Preprocessing failed: {}",
+                    Local::now().format("%Y-%m-%d %H:%M:%S"),
+                    e
+                );
                 exit(1);
             }
         }
@@ -225,11 +237,11 @@ fn find_book_toml() -> Result<PathBuf> {
     Ok(book_toml)
 }
 
-fn handle_preprocessing() -> Result<()> {
+async fn handle_preprocessing_async() -> Result<()> {
     let (ctx, book) = CmdPreprocessor::parse_input(io::stdin())?;
 
     let preprocessor = CheckCodePreprocessor::new();
-    let processed_book = preprocessor.run(&ctx, book)?;
+    let processed_book = preprocessor.run_async(&ctx, book).await?;
 
     serde_json::to_writer(io::stdout(), &processed_book)?;
 

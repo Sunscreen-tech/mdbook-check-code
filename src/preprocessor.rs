@@ -48,12 +48,11 @@ impl Default for CheckCodePreprocessor {
     }
 }
 
-impl Preprocessor for CheckCodePreprocessor {
-    fn name(&self) -> &str {
-        "check-code"
-    }
-
-    fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
+impl CheckCodePreprocessor {
+    /// Runs the preprocessor asynchronously.
+    ///
+    /// This is the core async implementation that processes all code blocks.
+    pub async fn run_async(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
         use chrono::Local;
 
         eprintln!(
@@ -68,7 +67,6 @@ impl Preprocessor for CheckCodePreprocessor {
         }
 
         let config = CheckCodeConfig::from_preprocessor_context(ctx)?;
-        let thread_pool = build_thread_pool(&config)?;
         let registry = LanguageRegistry::from_config(&config);
         let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
         log::debug!("Using temporary directory: {:?}", temp_dir.path());
@@ -84,7 +82,17 @@ impl Preprocessor for CheckCodePreprocessor {
 
         log::debug!("Collected {} compilation tasks", tasks.len());
 
-        let (results, duration) = compilation::compile_tasks(tasks, &thread_pool);
+        let max_concurrent = get_max_concurrency(&config);
+        log::debug!(
+            "Using max_concurrent = {} ({})",
+            max_concurrent,
+            if config.parallel_jobs.is_some() {
+                "configured"
+            } else {
+                "default"
+            }
+        );
+        let (results, duration) = compilation::compile_tasks(tasks, max_concurrent).await;
 
         let (_successful, failed): (Vec<_>, Vec<_>) = results.iter().partition(|r| r.success());
 
@@ -97,21 +105,27 @@ impl Preprocessor for CheckCodePreprocessor {
         log::debug!("Preprocessor completed successfully.");
         Ok(book)
     }
+}
+
+impl Preprocessor for CheckCodePreprocessor {
+    fn name(&self) -> &str {
+        "check-code"
+    }
+
+    fn run(&self, ctx: &PreprocessorContext, book: Book) -> Result<Book> {
+        // Bridge to async implementation using the runtime created in main()
+        // This is always called from main() which creates the runtime first
+        tokio::runtime::Handle::current().block_on(self.run_async(ctx, book))
+    }
 
     fn supports_renderer(&self, _renderer: &str) -> bool {
         true
     }
 }
 
-fn build_thread_pool(config: &CheckCodeConfig) -> Result<rayon::ThreadPool> {
-    let mut builder = rayon::ThreadPoolBuilder::new();
-
-    if let Some(jobs) = config.parallel_jobs.filter(|&j| j > 0) {
-        log::debug!("Building thread pool with {} threads", jobs);
-        builder = builder.num_threads(jobs);
-    } else {
-        log::debug!("Building default thread pool");
-    }
-
-    builder.build().context("Failed to build Rayon thread pool")
+fn get_max_concurrency(config: &CheckCodeConfig) -> usize {
+    config
+        .parallel_jobs
+        .filter(|&j| j > 0)
+        .unwrap_or_else(|| num_cpus::get() * 8) // 8x for I/O-bound subprocess work
 }
