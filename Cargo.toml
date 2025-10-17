@@ -4,9 +4,18 @@ version = "0.1.0"
 edition = "2021"
 license = "AGPL-3.0-only"
 
+[lib]
+name = "mdbook_check_code"
+path = "src/lib.rs"
+
 [[bin]]
 name = "mdbook-check-code"
 path = "src/main.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+required-features = ["integration-tests"]
 
 [dependencies]
 mdbook = "0.4"
@@ -22,6 +31,13 @@ chrono = "0.4"
 clap = { version = "4.5", features = ["derive", "cargo"] }
 sha2 = "0.10.9"
 directories = "6.0.0"
-tokio = { version = "1.42", features = ["process", "fs", "io-util"] }
+tokio = { version = "1.42", features = ["process", "fs", "io-util", "rt"] }
 futures = "0.3"
 num_cpus = "1.16"
+
+[dev-dependencies]
+tokio = { version = "1.42", features = ["macros", "rt-multi-thread"] }
+
+[features]
+default = []
+integration-tests = []

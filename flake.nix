@@ -40,8 +40,6 @@
         };
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-        fixture-src = gitignoreSource ./tests/fixtures;
-
         # Map script names to their specific dependencies
         scriptDeps = {
           format-markdown = with pkgs; [ git nodePackages.prettier ];
@@ -104,12 +102,13 @@
             echo "Markdown formatting check passed" > $out/result
           '';
 
-          # The script inlined for brevity, consider extracting it
-          # so that it becomes independent of nix
-          runE2ETests = pkgs.runCommand "e2e-tests" {
+          # Run all tests including integration tests
+          # Use gitignoreSource to include test fixtures (cleanCargoSource filters them out)
+          mdbook-check-code-test = craneLib.cargoTest (commonArgs // {
+            src = gitignoreSource ./.;
+            inherit cargoArtifacts;
+            cargoTestExtraArgs = "--features integration-tests";
             nativeBuildInputs = with pkgs; [
-              mdbook
-
               # C compilers
               sunscreen-llvm-pkg
               gcc
@@ -119,33 +118,9 @@
               nodePackages.typescript
               solc
             ];
-          } ''
-            cp -r ${fixture-src}/* $TMPDIR/
-
-            # Make everything in this directory writable, otherwise all the
-            # commands below will fail.
-            chmod -R u+w .
-
-            export CLANG="${sunscreen-llvm-pkg}/bin/clang"
-            export RUST_LOG=info
-
-            # Set XDG_DATA_HOME to a temporary location for approval storage
-            # This allows the approval mechanism to work in the nix sandbox
-            export XDG_DATA_HOME=$TMPDIR/xdg-data
-
-            # Replace the mdbook-check-code path in book.toml
-            # to point to the built binary in this derivation.
-            sed -i "s|../../target/release/mdbook-check-code|${mdbook-check-code}/bin/mdbook-check-code|g" book.toml
-
-            # Approve the book.toml for security
-            ${mdbook-check-code}/bin/mdbook-check-code allow
-
-            mdbook build
-
-            # After the build is successful, copy the final output to the expected $out path.
-            mkdir $out
-            cp -r $TMPDIR/book/* $out
-          '';
+            CLANG = "${sunscreen-llvm-pkg}/bin/clang";
+            RUST_LOG = "info";
+          });
         };
 
         devShells.default = with pkgs;

@@ -39,6 +39,7 @@ pub fn is_approved(book_toml_path: &Path) -> Result<bool> {
 }
 
 /// Approve a book.toml
+#[allow(dead_code)] // Used by CLI binary
 pub fn approve(book_toml_path: &Path) -> Result<()> {
     let content = fs::read_to_string(book_toml_path)
         .with_context(|| format!("Failed to read {}", book_toml_path.display()))?;
@@ -65,6 +66,7 @@ pub fn approve(book_toml_path: &Path) -> Result<()> {
 }
 
 /// Deny (remove approval) for a book.toml
+#[allow(dead_code)] // Used by CLI binary
 pub fn deny(book_toml_path: &Path) -> Result<()> {
     let content = fs::read_to_string(book_toml_path)
         .with_context(|| format!("Failed to read {}", book_toml_path.display()))?;
@@ -85,6 +87,7 @@ pub fn deny(book_toml_path: &Path) -> Result<()> {
 }
 
 /// List all approved books
+#[allow(dead_code)] // Used by CLI binary
 pub fn list_approved() -> Result<Vec<String>> {
     let approval_dir = get_approval_dir()?;
 

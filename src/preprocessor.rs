@@ -1,9 +1,9 @@
 use crate::approval::is_approved;
 use crate::config::CheckCodeConfig;
 use crate::language::LanguageRegistry;
+use crate::reporting::print_info;
 use crate::{compilation, reporting, task_collector};
 use anyhow::{Context, Result};
-use chrono::Local;
 use mdbook::book::Book;
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use tempfile::TempDir;
@@ -35,11 +35,39 @@ use tempfile::TempDir;
 /// The preprocessor validates compiler paths to prevent command injection attacks.
 /// Compiler paths cannot contain shell metacharacters (`;`, `|`, `&`, `` ` ``) or
 /// use parent directory traversal (`..`).
-pub struct CheckCodePreprocessor;
+pub struct CheckCodePreprocessor {
+    #[cfg(feature = "integration-tests")]
+    skip_approval: bool,
+}
 
 impl CheckCodePreprocessor {
     pub fn new() -> Self {
-        Self
+        Self {
+            #[cfg(feature = "integration-tests")]
+            skip_approval: false,
+        }
+    }
+
+    /// Create preprocessor with approval checking disabled.
+    ///
+    /// # Safety
+    ///
+    /// **WARNING**: This bypasses SHA256-based security checks and should ONLY
+    /// be used in tests. This function is only available when the `integration-tests`
+    /// feature is enabled.
+    ///
+    /// # Example
+    ///
+    /// ```toml
+    /// [dev-dependencies]
+    /// mdbook-check-code = { version = "0.1", features = ["integration-tests"] }
+    /// ```
+    #[cfg(feature = "integration-tests")]
+    #[allow(dead_code)] // Used by integration tests with integration-tests feature
+    pub fn new_for_testing() -> Self {
+        Self {
+            skip_approval: true,
+        }
     }
 }
 
@@ -51,15 +79,19 @@ impl Default for CheckCodePreprocessor {
 
 impl CheckCodePreprocessor {
     pub async fn run_async(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
-        eprintln!(
-            "{} [INFO] (mdbook_check_code): Preprocessor started",
-            Local::now().format("%Y-%m-%d %H:%M:%S")
-        );
+        print_info("Preprocessor started");
 
-        let book_toml_path = ctx.root.join("book.toml");
-        if !is_approved(&book_toml_path)? {
-            reporting::report_approval_error(&book_toml_path)?;
-            anyhow::bail!("book.toml not approved");
+        #[cfg(feature = "integration-tests")]
+        let skip_approval = self.skip_approval;
+        #[cfg(not(feature = "integration-tests"))]
+        let skip_approval = false;
+
+        if !skip_approval {
+            let book_toml_path = ctx.root.join("book.toml");
+            if !is_approved(&book_toml_path)? {
+                reporting::report_approval_error(&book_toml_path)?;
+                anyhow::bail!("book.toml not approved");
+            }
         }
 
         let config = CheckCodeConfig::from_preprocessor_context(ctx)?;
@@ -109,7 +141,9 @@ impl Preprocessor for CheckCodePreprocessor {
     }
 
     fn run(&self, ctx: &PreprocessorContext, book: Book) -> Result<Book> {
-        tokio::runtime::Handle::current().block_on(self.run_async(ctx, book))
+        let runtime = tokio::runtime::Runtime::new()
+            .context("Failed to create Tokio runtime for async preprocessing")?;
+        runtime.block_on(self.run_async(ctx, book))
     }
 
     fn supports_renderer(&self, _renderer: &str) -> bool {
