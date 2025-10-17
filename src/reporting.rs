@@ -123,13 +123,11 @@ pub fn print_compilation_statistics(results: &[CompilationResult], parallel_dura
 
     print_info(format!(
         "Successfully validated {} code block(s) ({})",
-        total_blocks,
-        stats_str
+        total_blocks, stats_str
     ));
     print_info(format!(
         "Preprocessor finished in {}ms (avg {}ms per block)",
-        parallel_ms,
-        avg_ms
+        parallel_ms, avg_ms
     ));
 
     log::debug!("Timing breakdown by language:");
