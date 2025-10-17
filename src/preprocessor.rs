@@ -36,14 +36,14 @@ use tempfile::TempDir;
 /// Compiler paths cannot contain shell metacharacters (`;`, `|`, `&`, `` ` ``) or
 /// use parent directory traversal (`..`).
 pub struct CheckCodePreprocessor {
-    #[cfg(feature = "test-util")]
+    #[cfg(feature = "integration-tests")]
     skip_approval: bool,
 }
 
 impl CheckCodePreprocessor {
     pub fn new() -> Self {
         Self {
-            #[cfg(feature = "test-util")]
+            #[cfg(feature = "integration-tests")]
             skip_approval: false,
         }
     }
@@ -53,17 +53,17 @@ impl CheckCodePreprocessor {
     /// # Safety
     ///
     /// **WARNING**: This bypasses SHA256-based security checks and should ONLY
-    /// be used in tests. This function is only available when the `test-util`
+    /// be used in tests. This function is only available when the `integration-tests`
     /// feature is enabled.
     ///
     /// # Example
     ///
     /// ```toml
     /// [dev-dependencies]
-    /// mdbook-check-code = { version = "0.1", features = ["test-util"] }
+    /// mdbook-check-code = { version = "0.1", features = ["integration-tests"] }
     /// ```
-    #[cfg(feature = "test-util")]
-    #[allow(dead_code)] // Used by integration tests with test-util feature
+    #[cfg(feature = "integration-tests")]
+    #[allow(dead_code)] // Used by integration tests with integration-tests feature
     pub fn new_for_testing() -> Self {
         Self {
             skip_approval: true,
@@ -81,9 +81,9 @@ impl CheckCodePreprocessor {
     pub async fn run_async(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
         print_info("Preprocessor started");
 
-        #[cfg(feature = "test-util")]
+        #[cfg(feature = "integration-tests")]
         let skip_approval = self.skip_approval;
-        #[cfg(not(feature = "test-util"))]
+        #[cfg(not(feature = "integration-tests"))]
         let skip_approval = false;
 
         if !skip_approval {

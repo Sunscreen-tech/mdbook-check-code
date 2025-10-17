@@ -15,7 +15,7 @@ path = "src/main.rs"
 [[test]]
 name = "integration"
 path = "tests/integration.rs"
-required-features = ["test-util"]
+required-features = ["integration-tests"]
 
 [dependencies]
 mdbook = "0.4"
@@ -40,4 +40,4 @@ tokio = { version = "1.42", features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = []
-test-util = []
+integration-tests = []
