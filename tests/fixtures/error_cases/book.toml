@@ -1,0 +1,17 @@
+[book]
+authors = ["Test Author"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Error Test Book"
+
+[preprocessor.check-code]
+command = "../../../target/release/mdbook-check-code"
+
+# C configuration
+[preprocessor.check-code.languages.c]
+enabled = true
+compiler = "gcc"
+flags = ["-fsyntax-only"]
+
+[output.html]

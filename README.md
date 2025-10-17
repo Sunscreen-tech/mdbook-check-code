@@ -90,15 +90,20 @@ Optional:
 
 ## Testing
 
-Test with included fixtures:
+Run the test suite (requires compilers: gcc, clang with parasol target, tsc, solc):
 
 ```bash
-# With all compilers (Nix)
-nix develop --command bash -c "cd tests/fixtures && mdbook build"
+# Run all tests (unit + integration)
+cargo test --features test-util
 
-# Or with Cargo
-cargo build --release
-cd tests/fixtures && mdbook build
+# Run only unit tests (no compilers required)
+cargo test --lib
+
+# Run integration tests
+cargo test --test integration --features test-util
+
+# With Nix (provides all compilers)
+nix develop --command cargo test --features test-util
 ```
 
 ## License

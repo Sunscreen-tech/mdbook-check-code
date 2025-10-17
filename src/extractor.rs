@@ -60,9 +60,8 @@ pub struct CodeBlock {
 ///
 /// # Example
 ///
-/// ```ignore
-/// let markdown = r#"
-/// # My Code
+/// ````ignore
+/// let markdown = r#"# My Code
 ///
 /// ```c
 /// int main() { return 0; }
@@ -72,7 +71,7 @@ pub struct CodeBlock {
 /// let blocks = extract_code_blocks(markdown);
 /// assert_eq!(blocks.len(), 1);
 /// assert_eq!(blocks[0].language, "c");
-/// ```
+/// ````
 pub fn extract_code_blocks(content: &str) -> Vec<CodeBlock> {
     let parser = Parser::new(content);
     let mut code_blocks = Vec::new();

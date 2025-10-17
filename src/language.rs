@@ -29,7 +29,9 @@ impl LanguageMetadata {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// use mdbook_check_code::get_language_metadata;
+    ///
     /// let makefile_meta = get_language_metadata("makefile");
     /// assert!(makefile_meta.is_complete_filename());
     /// assert_eq!(makefile_meta.file_extension, "Makefile");
@@ -38,7 +40,7 @@ impl LanguageMetadata {
     /// assert!(!c_meta.is_complete_filename());
     /// assert_eq!(c_meta.file_extension, ".c");
     /// ```
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Public API utility, usage will grow
     pub fn is_complete_filename(&self) -> bool {
         !self.file_extension.starts_with('.')
     }
@@ -61,7 +63,9 @@ impl LanguageMetadata {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
+/// use mdbook_check_code::get_language_metadata;
+///
 /// let metadata = get_language_metadata("c");
 /// assert_eq!(metadata.fence_markers, vec!["c", "h"]);
 /// assert_eq!(metadata.file_extension, ".c");
