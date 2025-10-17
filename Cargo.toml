@@ -12,6 +12,11 @@ path = "src/lib.rs"
 name = "mdbook-check-code"
 path = "src/main.rs"
 
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+required-features = ["test-util"]
+
 [dependencies]
 mdbook = "0.4"
 pulldown-cmark = "0.11"

@@ -15,7 +15,7 @@
 //! ## Adding New Tests
 //!
 //! 1. Create a new fixture in tests/fixtures/ if needed
-//! 2. Use `TestFixture::new()` or `TestFixture::new_from()`
+//! 2. Use `TestFixture::new("path/to/fixture")`
 //! 3. Use `#[tokio::test]` for async tests
 //! 4. Assert on the returned Result or Book
 
@@ -31,7 +31,7 @@ use mdbook_check_code::CheckCodePreprocessor;
 
 #[tokio::test]
 async fn integration_valid_code_blocks_compile_successfully() -> Result<()> {
-    let fixture = TestFixture::new()?;
+    let fixture = TestFixture::new("tests/fixtures/valid_cases")?;
     let test = PreprocessorTest::from_fixture(&fixture)?;
 
     let result = test.run().await;
@@ -46,7 +46,7 @@ async fn integration_valid_code_blocks_compile_successfully() -> Result<()> {
 
 #[tokio::test]
 async fn integration_multiple_languages_supported() -> Result<()> {
-    let fixture = TestFixture::new()?;
+    let fixture = TestFixture::new("tests/fixtures/valid_cases")?;
     let test = PreprocessorTest::from_fixture(&fixture)?;
 
     // Fixture contains C, TypeScript, and Solidity
@@ -62,7 +62,7 @@ async fn integration_multiple_languages_supported() -> Result<()> {
 
 #[tokio::test]
 async fn integration_compilation_errors_detected() -> Result<()> {
-    let fixture = TestFixture::new_from("tests/fixtures/error_cases")?;
+    let fixture = TestFixture::new("tests/fixtures/error_cases")?;
     let test = PreprocessorTest::from_fixture(&fixture)?;
 
     let result = test.run().await;
@@ -83,7 +83,7 @@ async fn integration_compilation_errors_detected() -> Result<()> {
 
 #[tokio::test]
 async fn integration_book_structure_unchanged() -> Result<()> {
-    let fixture = TestFixture::new()?;
+    let fixture = TestFixture::new("tests/fixtures/valid_cases")?;
     let md = MDBook::load(fixture.book_path())?;
     let original_sections = md.book.sections.len();
 
@@ -101,7 +101,7 @@ async fn integration_book_structure_unchanged() -> Result<()> {
 
 #[tokio::test]
 async fn integration_nested_chapters_processed() -> Result<()> {
-    let fixture = TestFixture::new()?;
+    let fixture = TestFixture::new("tests/fixtures/valid_cases")?;
     let md = MDBook::load(fixture.book_path())?;
 
     // Verify nested structure exists:
@@ -130,7 +130,7 @@ async fn integration_nested_chapters_processed() -> Result<()> {
 
 #[tokio::test]
 async fn integration_unapproved_book_rejected() -> Result<()> {
-    let fixture = TestFixture::new()?;
+    let fixture = TestFixture::new("tests/fixtures/valid_cases")?;
     let md = MDBook::load(fixture.book_path())?;
 
     let input_json = serde_json::json!([

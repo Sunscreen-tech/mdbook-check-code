@@ -6,13 +6,24 @@ use std::fmt::Display;
 use std::path::Path;
 use std::time::Duration;
 
-/// Prints an error message to stderr with mdBook-style timestamp and prefix.
-pub fn print_error<S: Display>(message: S) {
+/// Internal helper for printing messages with consistent formatting.
+fn print_message<S: Display>(level: &str, message: S) {
     eprintln!(
-        "{} [ERROR] (mdbook_check_code): {}",
+        "{} [{}] (mdbook_check_code): {}",
         Local::now().format("%Y-%m-%d %H:%M:%S"),
+        level,
         message
     );
+}
+
+/// Prints an error message to stderr with mdBook-style timestamp and prefix.
+pub fn print_error<S: Display>(message: S) {
+    print_message("ERROR", message);
+}
+
+/// Prints an info message to stderr with mdBook-style timestamp and prefix.
+pub fn print_info<S: Display>(message: S) {
+    print_message("INFO", message);
 }
 
 /// Reports the approval error to stderr with mdBook-style formatting.
@@ -110,18 +121,16 @@ pub fn print_compilation_statistics(results: &[CompilationResult], parallel_dura
     };
     let parallel_ms = parallel_duration.as_millis();
 
-    eprintln!(
-        "{} [INFO] (mdbook_check_code): Successfully validated {} code block(s) ({})",
-        Local::now().format("%Y-%m-%d %H:%M:%S"),
+    print_info(format!(
+        "Successfully validated {} code block(s) ({})",
         total_blocks,
         stats_str
-    );
-    eprintln!(
-        "{} [INFO] (mdbook_check_code): Preprocessor finished in {}ms (avg {}ms per block)",
-        Local::now().format("%Y-%m-%d %H:%M:%S"),
+    ));
+    print_info(format!(
+        "Preprocessor finished in {}ms (avg {}ms per block)",
         parallel_ms,
         avg_ms
-    );
+    ));
 
     log::debug!("Timing breakdown by language:");
     for (lang, count) in sorted_stats {

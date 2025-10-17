@@ -22,8 +22,5 @@ mod preprocessor;
 mod reporting;
 mod task_collector;
 
-// Public API (stable)
-pub use preprocessor::CheckCodePreprocessor;
-
-// Language utilities
 pub use language::{get_language_metadata, LanguageMetadata};
+pub use preprocessor::CheckCodePreprocessor;

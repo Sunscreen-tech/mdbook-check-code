@@ -1,9 +1,9 @@
 use crate::approval::is_approved;
 use crate::config::CheckCodeConfig;
 use crate::language::LanguageRegistry;
+use crate::reporting::print_info;
 use crate::{compilation, reporting, task_collector};
 use anyhow::{Context, Result};
-use chrono::Local;
 use mdbook::book::Book;
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use tempfile::TempDir;
@@ -79,10 +79,7 @@ impl Default for CheckCodePreprocessor {
 
 impl CheckCodePreprocessor {
     pub async fn run_async(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
-        eprintln!(
-            "{} [INFO] (mdbook_check_code): Preprocessor started",
-            Local::now().format("%Y-%m-%d %H:%M:%S")
-        );
+        print_info("Preprocessor started");
 
         #[cfg(feature = "test-util")]
         let skip_approval = self.skip_approval;
@@ -144,7 +141,6 @@ impl Preprocessor for CheckCodePreprocessor {
     }
 
     fn run(&self, ctx: &PreprocessorContext, book: Book) -> Result<Book> {
-        // Create a new runtime for preprocessing (mdBook doesn't provide one)
         let runtime = tokio::runtime::Runtime::new()
             .context("Failed to create Tokio runtime for async preprocessing")?;
         runtime.block_on(self.run_async(ctx, book))

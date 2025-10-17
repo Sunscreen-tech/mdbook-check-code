@@ -40,7 +40,7 @@ impl LanguageMetadata {
     /// assert!(!c_meta.is_complete_filename());
     /// assert_eq!(c_meta.file_extension, ".c");
     /// ```
-    #[allow(dead_code)] // Public API utility, usage will grow
+    #[allow(dead_code)]
     pub fn is_complete_filename(&self) -> bool {
         !self.file_extension.starts_with('.')
     }

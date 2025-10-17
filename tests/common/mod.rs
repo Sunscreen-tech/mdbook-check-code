@@ -21,21 +21,18 @@ pub struct TestFixture {
 }
 
 impl TestFixture {
-    /// Create a new test fixture from the default valid_cases directory
-    pub fn new() -> Result<Self> {
-        Self::new_from("tests/fixtures/valid_cases")
-    }
-
-    /// Create a new test fixture from a specific source directory
-    pub fn new_from(source: impl AsRef<Path>) -> Result<Self> {
+    /// Create a new test fixture from a source directory
+    pub fn new(source: impl AsRef<Path>) -> Result<Self> {
         let book_dir = TempDir::new()?;
 
         // Copy fixture to temp location
         copy_dir_all(source.as_ref(), book_dir.path())?;
 
+        let book_path = book_dir.path().to_path_buf();
+
         Ok(Self {
-            book_path: book_dir.path().to_path_buf(),
             _book_dir: book_dir,
+            book_path,
         })
     }
 
