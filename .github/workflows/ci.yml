@@ -98,4 +98,4 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Run integration tests
-        run: nix build -L .#checks.x86_64-linux.runE2ETests
+        run: nix build -L .#checks.x86_64-linux.mdbook-check-code-test
